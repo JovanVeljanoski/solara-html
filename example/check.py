@@ -17,7 +17,12 @@ def main(url: str = "http://localhost:8765", screenshot: str = "solara-html-demo
         name_input = page.locator(".card input")
         python_sees = page.locator("text=Python sees")
 
+        # data-solara-prop-disabled: Reset is disabled while the name is the default.
+        reset_button = page.locator(".card button", has_text="Reset")
+        expect(reset_button).to_be_disabled()
+
         name_input.fill("Ada")
+        expect(reset_button).to_be_enabled()
         expect(python_sees).to_have_text("Python sees: Ada")
         expect(page.locator(".card h2")).to_have_text("Hello, Ada")
         expect(page.locator(".card .count")).to_have_text("3 characters")
@@ -25,8 +30,9 @@ def main(url: str = "http://localhost:8765", screenshot: str = "solara-html-demo
         name_input.fill("A")
         expect(page.locator(".card .count")).to_have_text("1 character")
 
-        page.locator(".card button", has_text="Reset").click()
+        reset_button.click()
         expect(python_sees).to_have_text("Python sees: World")
+        expect(reset_button).to_be_disabled()
 
         page.get_by_role("button", name="Shout").click()
         expect(python_sees).to_have_text("Python sees: WORLD")

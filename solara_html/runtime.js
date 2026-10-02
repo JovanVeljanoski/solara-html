@@ -102,6 +102,13 @@ function wireBindings(root, propsRef) {
           continue;
         }
         updaters.push((props) => setAttribute(element, attribute, props[value]));
+      } else if (name.startsWith("data-solara-prop-")) {
+        const property = SAFE_PROPERTIES[name.slice("data-solara-prop-".length)];
+        if (!property) {
+          warn(`${name}: cannot bind the DOM property "${name.slice("data-solara-prop-".length)}"`);
+          continue;
+        }
+        updaters.push((props) => setProperty(element, property, props[value]));
       } else if (name.startsWith("data-solara-event-")) {
         listen(element, name.slice("data-solara-event-".length), () => propsRef.current[value]?.(null));
       }
@@ -153,6 +160,31 @@ function setFormValue(element, value) {
   } else if (element.value !== toText(value)) {
     // Only write on a real change, so typing keeps its caret position.
     element.value = toText(value);
+  }
+}
+
+// DOM properties that `data-solara-prop-<name>` may set. The key is lowercase, as HTML attribute names are.
+const SAFE_PROPERTIES = {
+  checked: "checked",
+  disabled: "disabled",
+  hidden: "hidden",
+  indeterminate: "indeterminate",
+  multiple: "multiple",
+  readonly: "readOnly",
+  required: "required",
+  selected: "selected",
+  textcontent: "textContent",
+  value: "value",
+};
+
+function setProperty(element, property, value) {
+  if (property === "textContent") {
+    element.textContent = toText(value);
+  } else if (property === "value") {
+    // Only write on a real change, so typing keeps its caret position.
+    if (element.value !== toText(value)) element.value = toText(value);
+  } else {
+    element[property] = Boolean(value);
   }
 }
 

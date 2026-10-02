@@ -8,8 +8,8 @@ from typing import Any, Callable
 
 import ipyreact
 import traitlets
-from solara.server.reload import watch_file
 
+from solara_html._compat import watch_file
 from solara_html.imports import define_imports, module_name
 from solara_html.parse import ComponentFile, parse_component_file
 

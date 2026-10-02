@@ -1,0 +1,156 @@
+<template>
+  <section class="beacon">
+    <div class="topline">
+      <span class="eyebrow">BEACON LAB / LIVE SIGNAL</span>
+      <span class="live"><i></i> ON AIR</span>
+    </div>
+
+    <h2 data-solara-text="title"></h2>
+    <p class="subline" data-solara-text="status"></p>
+
+    <div class="scope" aria-label="Animated signal display">
+      <div class="grid"></div>
+      <div class="orbit orbit-one"></div>
+      <div class="orbit orbit-two"></div>
+      <div class="orbit orbit-three"></div>
+      <div class="sweep"></div>
+      <div class="wave"></div>
+      <div class="core"><span></span></div>
+      <div class="scope-label">SIGNAL ACTIVE</div>
+      <div class="scope-number" data-solara-text="intensity"></div>
+    </div>
+
+    <div class="details">
+      <label class="field">
+        <span>CALL SIGN <small>COMMITS AFTER A PAUSE / ENTER / BLUR</small></span>
+        <input type="text" maxlength="18" spellcheck="false">
+      </label>
+      <div class="counter">
+        <span>TRANSMISSIONS</span>
+        <strong data-solara-text="transmissions"></strong>
+      </div>
+    </div>
+
+    <button class="pulse-button" type="button" data-solara-event-click="pulse">
+      <span class="pulse-icon">◉</span> Send a pulse <span aria-hidden="true">↗</span>
+    </button>
+
+    <div class="vue-controls">
+      <div class="control-label">SLOT / EXISTING SOLARA WIDGETS</div>
+      <slot></slot>
+    </div>
+  </section>
+</template>
+
+<style>
+  :host { display: block; width: 100%; }
+  * { box-sizing: border-box; }
+  .beacon {
+    --hue: 184;
+    --power: .64;
+    --speed: 12s;
+    position: relative;
+    min-height: 672px;
+    overflow: hidden;
+    padding: 24px;
+    border: 1px solid hsl(var(--hue) 55% 65% / .28);
+    border-radius: 24px;
+    color: #eaf8ff;
+    background: radial-gradient(circle at 50% 27%, hsl(var(--hue) 65% 22% / .42), transparent 45%),
+                linear-gradient(160deg, #101d2b, #09111e 65%, #101722);
+    box-shadow: 0 20px 55px rgb(10 18 28 / .18), inset 0 1px rgb(255 255 255 / .07);
+    font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .topline, .details { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .eyebrow, .control-label, .field > span, .counter > span {
+    color: #8eaabc; font-size: 10px; font-weight: 750; letter-spacing: .16em;
+  }
+  .live { color: #b7f9e6; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+  .live i { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #65f5ba; box-shadow: 0 0 12px #65f5ba; }
+  h2 { margin: 21px 0 2px; font-size: 30px; font-weight: 650; letter-spacing: -.04em; }
+  .subline { margin: 0; color: #89a7bc; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .scope { position: relative; display: grid; place-items: center; height: 290px; margin: 14px -12px 12px; overflow: hidden; isolation: isolate; }
+  .grid { position: absolute; inset: 0; opacity: .25; background-image: linear-gradient(#487186 1px, transparent 1px), linear-gradient(90deg, #487186 1px, transparent 1px); background-size: 29px 29px; mask-image: radial-gradient(ellipse, black 12%, transparent 73%); }
+  .orbit { position: absolute; width: 232px; height: 232px; border: 1px solid hsl(var(--hue) 95% 68% / .25); border-radius: 50%; }
+  .orbit-one { width: 110px; height: 110px; border-style: dashed; border-color: hsl(var(--hue) 95% 70% / .53); animation: spin var(--speed) linear infinite; }
+  .orbit-two { width: 185px; height: 185px; border-style: dashed; animation: spin calc(var(--speed) * -1.7) linear infinite; }
+  .orbit-three { width: 267px; height: 267px; border-color: hsl(var(--hue) 95% 68% / .13); }
+  .sweep { position: absolute; width: 250px; height: 250px; border-radius: 50%; background: conic-gradient(from 20deg, transparent 0 290deg, hsl(var(--hue) 95% 65% / .14), transparent); animation: spin calc(var(--speed) * .55) linear infinite; }
+  .core { z-index: 1; display: grid; place-items: center; width: 73px; height: 73px; border-radius: 50%; background: radial-gradient(circle, #ffffff 0 8%, hsl(var(--hue) 100% 78%) 25%, hsl(var(--hue) 95% 53%) 55%, transparent 73%); box-shadow: 0 0 calc(46px * var(--power)) 17px hsl(var(--hue) 90% 55% / .55); transform: scale(calc(.65 + var(--power) * .6)); transition: transform .25s, box-shadow .25s; }
+  .core span { width: 18px; height: 18px; border-radius: 50%; background: white; filter: blur(4px); }
+  .wave { position: absolute; z-index: 2; width: 75px; height: 75px; border: 2px solid hsl(var(--hue) 100% 75% / .9); border-radius: 50%; opacity: 0; }
+  .wave.travel { animation: travel 850ms ease-out; }
+  .scope-label, .scope-number { position: absolute; bottom: 11px; color: #9cb6c6; font-size: 10px; font-weight: 750; letter-spacing: .15em; }
+  .scope-label { left: 18px; } .scope-number { right: 18px; color: hsl(var(--hue) 100% 77%); font-size: 20px; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .details { padding: 11px 0 19px; border-top: 1px solid rgb(169 222 242 / .12); }
+  .field { flex: 1; min-width: 0; } .field > span { display: block; margin-bottom: 7px; } .field small { margin-left: 4px; color: #5f8095; font-size: 9px; }
+  input { width: 100%; padding: 10px 12px; border: 1px solid #426174; border-radius: 9px; outline: none; color: #eaf8ff; background: #172a3a; font: 600 13px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .05em; }
+  input:focus { border-color: hsl(var(--hue) 95% 70%); box-shadow: 0 0 0 3px hsl(var(--hue) 90% 60% / .15); }
+  .counter { min-width: 105px; text-align: right; } .counter > span { display: block; margin-bottom: 2px; } .counter strong { font: 600 23px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pulse-button { display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; padding: 11px 16px; border: 0; border-radius: 10px; color: #081820; background: hsl(var(--hue) 87% 72%); cursor: pointer; font: 750 13px ui-sans-serif, system-ui, sans-serif; transition: filter .15s, transform .15s; }
+  .pulse-button:hover { filter: brightness(1.13); transform: translateY(-1px); } .pulse-button:active { transform: translateY(1px); }
+  .pulse-icon { font-size: 17px; line-height: 0; }
+  .vue-controls { margin-top: 18px; padding: 14px 15px 3px; border: 1px solid rgb(169 222 242 / .13); border-radius: 11px; background: rgb(255 255 255 / .04); }
+  .control-label { margin-bottom: 2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes travel { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(4.3); } }
+</style>
+
+<script type="module">
+  export function mount({ root, get, set, subscribe }) {
+    const panel = root.querySelector('.beacon');
+    const wave = root.querySelector('.wave');
+    const callsignInput = root.querySelector('.field input');
+    let commitTimer;
+
+    const paint = () => {
+      const power = Math.max(0, Math.min(100, Number(get('intensity')) || 0));
+      panel.style.setProperty('--hue', String(get('hue')));
+      panel.style.setProperty('--power', String(power / 100));
+      panel.style.setProperty('--speed', `${18 - power * .11}s`);
+    };
+    const pulse = () => {
+      wave.classList.remove('travel');
+      void wave.offsetWidth;
+      wave.classList.add('travel');
+    };
+    const commitCallsign = () => {
+      clearTimeout(commitTimer);
+      set('callsign', callsignInput.value);
+    };
+    const scheduleCallsign = () => {
+      clearTimeout(commitTimer);
+      commitTimer = setTimeout(commitCallsign, 500);
+    };
+    const onCallsignKeydown = (event) => {
+      if (event.key === 'Enter') {
+        commitCallsign();
+        callsignInput.blur();
+      } else if (event.key === 'Escape') {
+        clearTimeout(commitTimer);
+        callsignInput.value = get('callsign');
+        callsignInput.blur();
+      }
+    };
+
+    paint();
+    callsignInput.value = get('callsign');
+    callsignInput.addEventListener('input', scheduleCallsign);
+    callsignInput.addEventListener('blur', commitCallsign);
+    callsignInput.addEventListener('keydown', onCallsignKeydown);
+    const stopCallsign = subscribe('callsign', value => { callsignInput.value = value ?? ''; });
+    const stopIntensity = subscribe('intensity', paint);
+    const stopHue = subscribe('hue', paint);
+    const stopPulse = subscribe('transmissions', pulse);
+    return () => {
+      clearTimeout(commitTimer);
+      callsignInput.removeEventListener('input', scheduleCallsign);
+      callsignInput.removeEventListener('blur', commitCallsign);
+      callsignInput.removeEventListener('keydown', onCallsignKeydown);
+      stopCallsign();
+      stopIntensity();
+      stopHue();
+      stopPulse();
+    };
+  }
+</script>

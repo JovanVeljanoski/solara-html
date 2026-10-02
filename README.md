@@ -1,9 +1,17 @@
 # solara-html
 
 Single-file HTML components for Solara, as a separate package.
-It is a small demo that this needs almost no change in Solara itself: no server routes, no template edits, no monkey patches.
-It needs one public hook, `solara.server.reload.watch_file`, for hot reload.
-That hook ships with Solara 1.64.0, so install that release or later.
+One `.html` file holds a component's template, scoped CSS and browser JavaScript, and Solara connects it to Python state.
+It works with a stock Solara: no server routes, no template edits, no monkey patches, no fork.
+
+It started as [widgetti/solara#1207](https://github.com/widgetti/solara/pull/1207) (a Solara core feature) and was reshaped
+into a package by Maarten Breddels in [widgetti/solara#1233](https://github.com/widgetti/solara/pull/1233).
+This repository continues that package. It is MIT licensed, like Solara.
+
+It needs Solara 1.63.1 or later.
+Hot reload of the HTML file in development mode needs `solara.server.reload.watch_file`, which is not in a Solara release yet
+([widgetti/solara#1232](https://github.com/widgetti/solara/pull/1232)). Without it, restart the server after you edit an HTML file.
+Production mode is not affected.
 
 ## API
 
@@ -36,6 +44,9 @@ See [example/greeting.html](example/greeting.html).
 - `data-solara-text="name"` sets the text content.
 - `data-solara-model="name"` syncs a text input, textarea, or checkbox (values are strings or booleans).
 - `data-solara-attr-title="name"` sets or removes an attribute.
+- `data-solara-prop-disabled="name"` sets a DOM property to a boolean (or, for `value` and `textcontent`, to text).
+  The allowed properties are `checked`, `disabled`, `hidden`, `indeterminate`, `multiple`, `readonly`, `required`,
+  `selected`, `textcontent` and `value`. Any other property is refused, with a warning.
 - `data-solara-event-click="reset"` calls `event_reset(None)`.
 
 A binding to an unknown prop or event logs a warning in the browser console.
@@ -67,8 +78,11 @@ A missing file or an import cycle raises a `ValueError`.
 
 ## Hot reload
 
-In development mode (`solara run` without `--production`), a change to the HTML file or to a file it imports reloads the app, like a change to a Python file.
+With a Solara release that has `solara.server.reload.watch_file` (not released yet, see the top), in development mode
+(`solara run` without `--production`) a change to the HTML file or to a file it imports reloads the app, like a change to a Python file.
 The reload runs the decorator again only when the component is defined in a file under the app's directory.
+
+With Solara 1.63.1, `watch_file` is replaced by a no-op (see `solara_html/_compat.py`): restart the server after editing an HTML file.
 
 ## How it works
 
@@ -97,7 +111,14 @@ The browser receives each component's code once per page, not once per instance.
 ```bash
 uv venv --python 3.11
 uv pip install -e ".[dev]"
-uv run playwright install chromium   # only for the check
-uv run solara run example/greeting_app.py
+uv run playwright install chromium   # only for the browser checks
+uv run pytest                        # unit tests
+
+# Greeting example (shows bindings, relative imports, slot)
+uv run solara run example/greeting_app.py --port 8765
 uv run python example/check.py --url http://localhost:8765   # in a second shell
+
+# Beacon Lab (two instances, debounced input, Vue widgets in the slot)
+uv run solara run example/beacon_app.py --port 8765
+uv run python example/check_beacon.py --url http://localhost:8765   # in a second shell
 ```
