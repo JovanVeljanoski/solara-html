@@ -67,7 +67,8 @@ Do:
 - Use CSS variables (`var(--x)`) for anything that must follow the page theme. Put spacing on an element inside the template, not on `:host`.
 - Clean up in `beforeUnmount`: timers, and listeners added to `document` or `window`.
 - Change a list or dict prop by assigning a new value (`this.items = [...this.items, x]`). An in-place change (`this.items.push(x)`, `item.done = true`) is also sent to Python, but an assignment is the clearer form.
-- Keep data that crosses the line to JSON types: `str`, `int`, `float`, `bool`, `None`, `list`, `dict`.
+- Keep data that crosses the line to JSON types: `str`, `int`, `float`, `bool`, `None`, `list`, `dict`. Convert dates and arrays in Python first.
+  A whole number that the browser writes to a `float` prop reaches Python as an `int`.
 - Treat a call to an event as asynchronous. The new props come back from Python a moment later.
 
 Do not:
@@ -76,6 +77,8 @@ Do not:
 - Do not use `onclick="..."` or other `on*` attributes, `srcdoc`, `javascript:` or `data:` URLs. They are removed. Use `@click`.
 - Do not use named slots, `<script setup>` or `setup()`. The first two cannot work, and `setup()` is not tested.
 - Do not give a `computed` or `methods` entry the same name as a prop or event. The component then shows an error.
+- Do not `@import` a remote URL or an absolute path in `<style>`. Use `<link rel="stylesheet" href="...">` in the template. Only `@import "./file.css"` works.
+- Do not use Vuetify or Solara components or classes in the template. Write plain HTML.
 - Do not rely on page CSS classes (Vuetify, Solara). The component has its own shadow root.
 - Do not name an argument like an `ipyreact.Widget` attribute (`layout`, `open`, `props`, `events`, ...), or start it with `_`. The decorator raises `ValueError`.
 - Do not use `window` or `document` inside `{{ }}` or directive expressions. Vue does not allow them there; call a method.
@@ -98,6 +101,24 @@ Do not:
 ```js
 watch: { draft(value) { this.query = value; } }     // `query` is a prop: the assignment calls on_query
 ```
+
+### Python tells the browser to do something
+
+Python cannot call a method in the browser. Send a value and react to it. A counter works for "do it again":
+
+```python
+@solara_html.component_html("field.html")
+def Field(text: str = "", on_text=None, focus_count: int = 0):   # Python: focus_count=n + 1 to focus
+    pass
+```
+```js
+watch: { focus_count() { this.$refs.input.focus(); } }
+```
+
+### Images, fonts and other files
+
+Files in the `public` folder next to your app are served at `/static/public/...`. Use that absolute path in `src`, in `<link rel="stylesheet" href>` and in CSS `url(...)`.
+A `data:` URL in `src` is removed by the guard.
 
 ### A modal dialog
 
@@ -123,6 +144,7 @@ Use a local `data()` field for the draft, and assign the prop only on `@change`,
 | A red message in place of the component | A template or script error. The message says what failed. The browser console has the stack. |
 | `ValueError` when Python starts | The decorator refused something: a name clash, `v-html`, a missing `<template>`, a missing imported file, an import cycle. The message names the file. |
 | A prop does not update in the browser | Python did not assign a new value. In Solara, `items.value.append(x)` does not notify; use `items.set([...items.value, x])`. |
+| `ValueError: cannot import ...` from `<style>` | An `@import` that is not a relative file. See above. |
 | A link, image, or iframe has no URL | The guard removed an unsafe URL. The browser console has a `solara-html:` warning that names it. |
 | A child component renders as an unknown element | Register it in `components` (see `quiz.html`). Its tag can be kebab-case: `<topic-picker>`. |
 

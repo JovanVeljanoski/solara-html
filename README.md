@@ -88,9 +88,11 @@ Like in Solara, you change a prop by **assigning** it, and you call an event as 
 - A list or dict prop can be changed in place too (`this.items.push(x)`, or a checkbox bound to `item.done`): the change is sent to Python. An assignment (`this.items = [...this.items, x]`) is the clearer form. In Python, as in Solara, `items.value.append(x)` is not seen: set a new list.
 - The names must not collide with names in the template's own script: a prop or event with the same name as a `computed` or `methods` entry raises an error in the browser.
 
+`on_<x>` is a callback only when `<x>` is an argument too. Otherwise `on_<x>` is a prop like any other (so `on_air: bool` works).
+
 Some argument names are reserved, and the decorator raises a `ValueError` for them:
 
-- names on `ipyreact.Widget`, such as `props`, `events`, `layout`, and `open`, and names that start with `_`;
+- names on `ipyreact.Widget`: `keys`, `comm`, `open`, `close`, `layout`, `model_id`, `tooltip`, `tabbable`, `children`, `events`, `props` (and more in other ipywidgets versions), and names that start with `_`;
 - two arguments that give the same React prop: ipyreact adds a `set<Name>` setter per prop, so `x` collides with `setX` and with `X`;
 - a prop and an event with the same name, such as `click` and `event_click`.
 
@@ -98,6 +100,7 @@ Some argument names are reserved, and the decorator raises a `ValueError` for th
 Only the default slot exists, because the children are widgets: write `<slot></slot>` (the package keeps it as a real `<slot>` element, so Vue does not drop it).
 
 Writing components with an LLM agent? Point it at [docs/authoring.md](docs/authoring.md): the contract, the rules, the traps and a recipe per case.
+The guide is installed with the package, as `solara_html/authoring.md`.
 
 ## The three parts of the file
 
@@ -122,8 +125,10 @@ Share a stylesheet between components with a relative `@import`:
 @import "./buttons.css";
 ```
 
-The file is inlined in each component and watched for hot reload. Remote or absolute imports (`@import "https://..."`) stay as they are, but `url(...)` inside an imported file is not rewritten, so use absolute paths there.
-You can also add `<link rel="stylesheet" href="/static/public/shared.css" />` to the template. Solara serves the `public` folder next to your app at `/static/public`.
+The file is inlined in each component and watched for hot reload. `@import "./a.css"`, `@import url(./a.css)` and the quoted forms work.
+Any other `@import` (a remote URL, an absolute path, a media query) raises a `ValueError`, because the browser would ignore it.
+`url(...)` inside an imported file is not rewritten, so use absolute paths there.
+For other stylesheets, add `<link rel="stylesheet" href="/static/public/shared.css" />` to the template. Solara serves the `public` folder next to your app at `/static/public`.
 
 ### Script
 
@@ -210,15 +215,28 @@ The browser receives each component's code once per page, not once per instance.
 - A script that does not export `component` logs a `solara-html:` warning in the console. The template still shows.
 - A mistake that Python can see raises a `ValueError` when the app starts, and the message names the file.
 
+## Data
+
+Props and event data travel as JSON, through the widget channel.
+
+- Use `str`, `int`, `float`, `bool`, `None`, `list` and `dict`. Convert anything else first (`date.isoformat()`, `array.tolist()`).
+  There is no `to_json` / `from_json` as in `solara.component_vue`, and no binary buffers.
+- JSON has one number type. A whole number that the browser writes to a `float` prop reaches Python as an `int` (`2`, not `2.0`).
+- Python cannot call a method in the browser. To tell the browser to do something (focus an input, play a sound), send a value it can react to,
+  such as a counter prop with a `watch` in the script.
+- Every change to a list or dict prop copies and compares the whole value. That is fine for hundreds of rows, not for tens of thousands.
+- The package sends Vue (about 173 KB, 63 KB gzipped), the runtime and every component to the browser once per page, through the widget channel.
+
 ## Limits
 
 - It runs in the Solara server. It is not tested in Jupyter.
+- It needs a browser from 2022 or later: Chrome and Edge 98, Firefox 101, Safari 16.4 (constructable stylesheets, `structuredClone`).
 - The template is compiled in the browser, which needs `unsafe-eval` in the CSP (see Security). The Vue build is about 63 KB gzipped.
 - Only the default `<slot>` exists. Named slots are not possible, because the children are widgets.
 - `<template>` is required. There are no single-file-component features such as `<script setup>` or `<style scoped>`; the Shadow DOM scopes the CSS.
 - React loads on the page next to Vue.
 - Page-wide CSS resets (such as Vuetify's `* { padding: 0 }`) beat `:host` rules, so put spacing on an element inside the template.
-- Page classes (Vuetify, Solara) do not apply inside the component. Use CSS variables, `@import`, or a `<link>` with an absolute path.
+- Page classes and components (Vuetify, Solara) do not apply inside the component. Use CSS variables, `@import`, or a `<link>` with an absolute path. Write the markup with plain HTML.
 
 ## Development and examples
 
@@ -243,6 +261,7 @@ then in a second shell `uv run python example/<check>.py --url http://localhost:
 | [quiz_app.py](example/quiz_app.py) | A child component (`topic_picker.js`), events with data, keyboard shortcuts, timers, a `<dialog>` | `check_quiz.py` |
 | [todo_app.py](example/todo_app.py) | A list of dicts that the browser edits (in place or by assignment) | `check_todo.py` |
 | [security_app.py](example/security_app.py) | What the guard and `v-safe-html` remove | `check_security.py` |
+| [greeting_app.py](example/greeting_app.py) again | Several browsers on one server, and a reload | `check_sessions.py` |
 | [errors_app.py](example/errors_app.py) | Broken on purpose (template, syntax error, bad import, missing export, throw): each error shows in its own component and names the file, the page keeps working | `check_errors.py` |
 
 Hot reload in development mode (starts its own server): `uv run python example/check_hot_reload.py`.

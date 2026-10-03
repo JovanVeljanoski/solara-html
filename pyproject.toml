@@ -26,5 +26,8 @@ dev = ["pytest", "playwright", "typer", "solara-server[starlette,dev]"]
 [tool.hatch.build.targets.wheel]
 packages = ["solara_html"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"docs/authoring.md" = "solara_html/authoring.md"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
