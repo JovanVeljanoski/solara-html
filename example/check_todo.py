@@ -43,6 +43,10 @@ def main(url: str = "http://localhost:8765", screenshot: str = "solara-html-todo
         expect(page.locator("li")).to_have_count(1)
         expect(python_sees).to_have_text("Python sees: [{'text': 'Test it', 'done': False}]")
 
+        # Python asks the browser to focus the input, by changing a prop that a watcher reacts to.
+        page.locator(".focus").click()
+        expect(page.locator("input.new")).to_be_focused()
+
         page.screenshot(path=screenshot, full_page=True)
         browser.close()
     if errors:

@@ -1,12 +1,12 @@
 <!--
   A list of dicts as a prop. The browser may change it in place (push, splice, a checkbox on an item)
-  or by assignment. Both reach Python.
+  or by assignment. Both reach Python. A counter prop lets Python ask the browser to focus the input.
 -->
 <template>
   <div class="todo">
     <h2>{{ remaining }} of {{ items.length }} left</h2>
     <form @submit.prevent="add">
-      <input v-model="draft" class="new" placeholder="What needs doing?" />
+      <input ref="field" v-model="draft" class="new" placeholder="What needs doing?" />
       <button type="submit" class="btn primary" :disabled="!draft.trim()">Add</button>
     </form>
     <ul>
@@ -39,6 +39,12 @@
     computed: {
       remaining() {
         return this.items.filter((item) => !item.done).length;
+      },
+    },
+    watch: {
+      // Python cannot call a method here. It changes this prop, and the watcher does the work.
+      focus_count() {
+        this.$refs.field.focus();
       },
     },
     methods: {

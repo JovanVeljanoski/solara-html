@@ -25,6 +25,7 @@ check_with_server() {
 }
 
 check_with_server greeting_app.py check.py
+check_with_server greeting_app.py check_sessions.py
 check_with_server beacon_app.py check_beacon.py
 check_with_server settings_app.py check_settings.py
 check_with_server quiz_app.py check_quiz.py
