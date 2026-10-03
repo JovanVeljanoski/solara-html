@@ -148,10 +148,36 @@ def test_inline_css_imports(tmp_path: Path):
     assert watched == {(tmp_path / "buttons.css").resolve(), (tmp_path / "shared" / "base.css").resolve()}
 
 
-def test_inline_css_imports_leaves_remote_and_absolute_imports(tmp_path: Path):
-    css = '@import "https://example.com/a.css";\n@import url(/static/public/b.css);'
+@pytest.mark.parametrize(
+    "target",
+    [
+        '"./a.css"',
+        "'./a.css'",
+        'url("./a.css")',
+        "url('./a.css')",
+        "url(./a.css)",
+        "url( ./a.css )",
+    ],
+)
+def test_inline_css_imports_forms(tmp_path: Path, target):
+    (tmp_path / "a.css").write_text(".a { color: red; }", encoding="utf-8")
 
-    assert inline_css_imports(css, tmp_path / "main.html") == css
+    assert inline_css_imports(f"@import {target};", tmp_path / "main.html") == ".a { color: red; }"
+
+
+@pytest.mark.parametrize(
+    "css",
+    [
+        '@import "https://example.com/a.css";',
+        "@import url(/static/public/b.css);",
+        '@import "a.css";',
+        '@import "./a.css" screen;',
+    ],
+)
+def test_inline_css_imports_refuses_what_it_cannot_inline(tmp_path: Path, css):
+    # The browser would drop these silently, so say so.
+    with pytest.raises(ValueError, match="cannot import"):
+        inline_css_imports(css, tmp_path / "main.html")
 
 
 def test_inline_css_imports_missing_file_names_importer(tmp_path: Path):

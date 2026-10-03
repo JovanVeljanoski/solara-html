@@ -28,6 +28,7 @@ def component_html(path: str) -> Callable[[Callable[..., None]], Callable[..., A
 
     The path is relative to the file of the decorated function.
     A change to that file, or to a file it imports, reloads the app.
+    The guide to writing the HTML file is `authoring.md`, next to this package's code.
     """
 
     def decorator(func: Callable[..., None]) -> Callable[..., Any]:
@@ -41,9 +42,7 @@ def component_html(path: str) -> Callable[[Callable[..., None]], Callable[..., A
             css=inline_css_imports(component.css, component_path) if component.css else None,
             script=component.script,
         )
-        arguments = list(signature.parameters)
-        prop_names = [n for n in arguments if n != "children" and not n.startswith("event_") and not (n.startswith("on_") and n[len("on_") :] in arguments)]
-        event_names = [n[len("event_") :] for n in arguments if n.startswith("event_")]
+        prop_names, event_names = _split_arguments(list(signature.parameters))
         # The script and the files it imports go to the browser as text. The runtime loads them, so that an error in
         # one of them shows in this component and does not stop the page.
         modules = bundle_imports(component.script, component_path) if component.script else []
@@ -69,12 +68,24 @@ def component_html(path: str) -> Callable[[Callable[..., None]], Callable[..., A
     return decorator
 
 
+def _split_arguments(arguments: list[str]) -> tuple[list[str], list[str]]:
+    """The props and the event names among the arguments of the decorated function.
+
+    `children` and `event_<name>` are not props. `on_<prop>` is a callback of that prop, when `<prop>` is an argument too.
+    """
+    props = [n for n in arguments if n != "children" and not n.startswith("event_") and not (n.startswith("on_") and n[len("on_") :] in arguments)]
+    events = [n[len("event_") :] for n in arguments if n.startswith("event_")]
+    return props, events
+
+
 def _widget_from_signature(class_name: str, signature: inspect.Signature) -> type:
     """An ipyreact widget class with one synced trait per prop.
 
     ipyreact passes each trait to React as a prop, with a set<Name> setter.
     Two arguments that give the same React prop name are rejected, because one would hide the other.
     """
+    arguments = list(signature.parameters)
+    props, _ = _split_arguments(arguments)
     properties = {}
     react_names: dict[str, str] = {}  # React prop name -> the argument that gives it
 
@@ -83,19 +94,15 @@ def _widget_from_signature(class_name: str, signature: inspect.Signature) -> typ
             raise ValueError(f"{class_name}: arguments {react_names[react_name]!r} and {argument!r} both give the React prop {react_name!r}")
         react_names[react_name] = argument
 
-    for name in signature.parameters:
-        if name == "children":
-            continue  # ipyreact already has children
+    for name in arguments:
         if name.startswith("event_"):
             claim(name[len("event_") :], name)  # ipyreact already has events
-            continue
-        if name.startswith("on_") and name[len("on_") :] in signature.parameters:
-            continue  # Reacton calls on_<prop> when <prop> changes
-        if name.startswith("_") or hasattr(ipyreact.Widget, name):
-            raise ValueError(f"{class_name}: argument {name!r} clashes with an ipyreact.Widget attribute")
-        claim(name, name)
-        claim("set" + name[0].upper() + name[1:], name)
-        properties[name] = traitlets.Any().tag(sync=True)
+        elif name in props:
+            if name.startswith("_") or hasattr(ipyreact.Widget, name):
+                raise ValueError(f"{class_name}: argument {name!r} clashes with an ipyreact.Widget attribute")
+            claim(name, name)
+            claim("set" + name[0].upper() + name[1:], name)
+            properties[name] = traitlets.Any().tag(sync=True)
     return type(class_name, (ipyreact.Widget,), properties)
 
 

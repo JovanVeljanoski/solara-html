@@ -86,7 +86,6 @@ export function defineHtmlComponent({ template, css, modules, entry, propNames, 
 // (the loader of ipyreact), so that bare imports such as "react" resolve as they do for any ipyreact module.
 // A module is loaded once per page. The result, a failure too, is kept by the id, which comes from the content.
 const loadedModules = new Map();
-const moduleFiles = new Map(); // blob URL -> file name, to name the file in error messages
 
 
 function loadModule(id, byId) {
@@ -99,9 +98,8 @@ function loadModule(id, byId) {
         let code = module.code;
         module.imports.forEach((dependency, index) => (code = code.split(dependency).join(dependencies[index].url)));
         const url = URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
-        moduleFiles.set(url, module.file);
         try {
-          return { url, namespace: await (globalThis.importShim ? globalThis.importShim(url) : import(/* webpackIgnore: true */ url)) };
+          return { url, namespace: await globalThis.importShim(url) };
         } catch (error) {
           throw new Error(`${module.file}: ${describe(error, module.imports.map((dependency) => byId.get(dependency).file))}`);
         }
@@ -111,13 +109,10 @@ function loadModule(id, byId) {
   return loadedModules.get(id);
 }
 
-// The browser names a module by its blob URL. Say the file name instead. When ipyreact's loader rewrote the module,
-// the URL in the message is one of its own, and the file is one of the imported files.
+// A missing export is reported with a blob URL, which means nothing to the author. It is one of the imported files.
 function describe(error, importedFiles) {
-  let text = `${error?.name && error.name !== "Error" ? error.name + ": " : ""}${error?.message ?? error}`;
-  for (const [url, file] of moduleFiles) text = text.split(url).join(file);
-  if (importedFiles.length) text = text.replace(/'blob:[^']*'/g, `'${importedFiles.join("' or '")}'`);
-  return text;
+  const text = `${error?.name && error.name !== "Error" ? error.name + ": " : ""}${error?.message ?? error}`;
+  return importedFiles.length ? text.replace(/'blob:[^']*'/g, `'${importedFiles.join("' or '")}'`) : text;
 }
 
 async function loadScript(modules, entry) {
@@ -133,11 +128,7 @@ function clone(value) {
   try {
     return structuredClone(toRaw(value));
   } catch {
-    try {
-      return JSON.parse(JSON.stringify(value));
-    } catch {
-      return value; // not copyable (for example a circular object): use it as it is
-    }
+    return JSON.parse(JSON.stringify(value)); // nested Vue proxies cannot be structured-cloned
   }
 }
 
@@ -178,7 +169,7 @@ function mountApp({ container, template, component, propNames, eventNames, props
   const methods = { ...(options.methods || {}) };
 
   for (const name of propNames) {
-    if (name in computed || name in methods) throw new Error(`solara-html: "${name}" is a Python prop, so a computed property or a method cannot have this name`);
+    if (Object.hasOwn(computed, name) || Object.hasOwn(methods, name)) throw new Error(`solara-html: "${name}" is a Python prop, so a computed property or a method cannot have this name`);
     computed[name] = {
       get: () => state[name],
       set: (value) => {
@@ -188,7 +179,7 @@ function mountApp({ container, template, component, propNames, eventNames, props
     };
   }
   for (const name of eventNames) {
-    if (name in computed || name in methods) throw new Error(`solara-html: "${name}" is a Python event, so a computed property or a method cannot have this name`);
+    if (Object.hasOwn(computed, name) || Object.hasOwn(methods, name)) throw new Error(`solara-html: "${name}" is a Python event, so a computed property or a method cannot have this name`);
     methods[name] = (data) => {
       const callback = propsRef.current[name];
       if (typeof callback !== "function") return warn(`event "${name}" has no Python callback`);
@@ -201,11 +192,9 @@ function mountApp({ container, template, component, propNames, eventNames, props
   const app = createApp({
     ...options,
     template,
-    inheritAttrs: false,
     computed,
     methods,
   });
-  app.config.warnHandler = (message) => warn(message);
   app.config.errorHandler = (error, _instance, info) => {
     // In the production build of Vue, `info` is a link to its error reference, not a name.
     console.error("solara-html: error in the template or script", error);

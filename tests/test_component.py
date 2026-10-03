@@ -130,28 +130,10 @@ def test_a_script_syntax_error_does_not_fail_in_python(tmp_path):
         pass
 
 
-def test_property_and_event_names(tmp_path):
-    path = tmp_path / "c.html"
-    path.write_text("<template><p></p></template>", encoding="utf-8")
-    seen = {}
+def test_split_arguments():
+    from solara_html.component import _split_arguments
 
-    import solara_html.component as module
+    arguments = ["name", "on_name", "on_other", "event_reset", "children"]
 
-    original = module._module_code
-
-    def spy(component, modules, prop_names, event_names):
-        seen["props"], seen["events"] = prop_names, event_names
-        return original(component, modules, prop_names, event_names)
-
-    module._module_code = spy
-    try:
-
-        @solara_html.component_html(str(path))
-        def Html(name="", on_name=None, on_other=None, event_reset=None, children=[]):
-            pass
-
-    finally:
-        module._module_code = original
-
-    # `on_name` belongs to the prop `name`; `on_other` has no prop, so it is a prop of its own.
-    assert seen == {"props": ["name", "on_other"], "events": ["reset"]}
+    # `on_name` belongs to the prop `name`; `on_other` has no prop of that name, so it is a prop itself.
+    assert _split_arguments(arguments) == (["name", "on_other"], ["reset"])

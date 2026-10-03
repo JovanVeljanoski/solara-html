@@ -106,16 +106,19 @@ def _bundle(code: str, importer: Path, file: str, root: Path, modules: dict[Path
     modules[importer] = ScriptModule(id=module_name(rewritten), file=file, code=rewritten, imports=tuple(imports))
 
 
-# `@import "./a.css";` and `@import url("./a.css");`, with a relative path. Remote and absolute URLs are left alone.
-# A comment is matched too, so that an `@import` written inside one is left alone.
-_CSS_IMPORT = re.compile(r"""(?P<comment>/\*.*?\*/)|@import\s+(?:url\(\s*)?(?P<quote>["'])(?P<specifier>\.\.?/[^"'\n]*)(?P=quote)\s*\)?\s*;""", re.DOTALL)
+# Any `@import`, except inside a comment. The browser ignores an `@import` in the stylesheet that the component builds
+# from text, so every one must be a relative file (it is inlined) or an error.
+_CSS_IMPORT = re.compile(r"(?P<comment>/\*.*?\*/)|@import\s+(?P<target>[^;]*);", re.DOTALL)
+# `"./a.css"`, `'./a.css'`, `url("./a.css")`, `url(./a.css)`
+_CSS_TARGET = re.compile(r"""(?:url\(\s*)?(?P<quote>["']?)(?P<specifier>\.\.?/[^"')\s]*)(?P=quote)\s*\)?""")
 
 
 def inline_css_imports(css: str, importer: Path) -> str:
-    """Replace each relative `@import` in `css` with the content of the file, and watch the file for hot reload.
+    """Replace each `@import "./file.css";` in `css` with the content of the file, and watch the file for hot reload.
 
-    A stylesheet that the page builds from text (as the component's shadow root does) ignores `@import`, so the files are
+    The component's stylesheet is built from text, and the browser ignores `@import` in such a stylesheet, so the files are
     inlined here. `url(...)` inside the files is not rewritten: it resolves against the page, so use absolute paths there.
+    Any other `@import` (a remote URL, a media query) raises a `ValueError`.
     """
     return _inline_css_imports(css, importer.resolve(), (importer.resolve(),))
 
@@ -124,7 +127,13 @@ def _inline_css_imports(css: str, importer: Path, stack: tuple[Path, ...]) -> st
     def replace(match: re.Match[str]) -> str:
         if match.group("comment"):
             return match.group("comment")
-        specifier = match.group("specifier")
+        target = _CSS_TARGET.fullmatch(match.group("target").strip())
+        if target is None:
+            raise ValueError(
+                f"{importer}: cannot import {match.group('target').strip()!r}: only a relative file such as \"./a.css\" can be imported "
+                'in <style>. Put other stylesheets in the template: <link rel="stylesheet" href="https://..." />'
+            )
+        specifier = target.group("specifier")
         path = (importer.parent / specifier).resolve()
         if path in stack:
             raise ValueError("CSS import cycle: " + " -> ".join(str(p) for p in stack[stack.index(path) :] + (path,)))
