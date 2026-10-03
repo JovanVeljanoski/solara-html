@@ -102,18 +102,32 @@ def test_native_slots():
     assert _native_slots("<slotted></slotted>") == "<slotted></slotted>"
 
 
-def test_props_and_events_are_passed_to_the_runtime(tmp_path):
+def test_the_runtime_module_holds_data_and_no_user_code(tmp_path):
     from solara_html.component import _module_code
+    from solara_html.imports import bundle_imports
     from solara_html.parse import parse_component_file
 
     path = tmp_path / "c.html"
     path.write_text('<template><p>{{ name }}</p></template><script type="module">export const component = {};</script>', encoding="utf-8")
+    component = parse_component_file(path)
 
-    code = _module_code(parse_component_file(path), ["name"], ["reset"])
+    code = _module_code(component, bundle_imports(component.script, path), ["name"], ["reset"])
 
-    assert "export const component = {};" in code
-    assert 'propNames: ["name"]' in code
-    assert 'eventNames: ["reset"]' in code
+    # The script is a string in the data, so a syntax error in it cannot stop the module from loading.
+    assert code.startswith('import { defineHtmlComponent } from "solara-html";\nexport const Component = defineHtmlComponent({')
+    assert '"propNames": ["name"]' in code
+    assert '"eventNames": ["reset"]' in code
+    assert '"code": "export const component = {};"' in code
+    assert "\nexport const component" not in code
+
+
+def test_a_script_syntax_error_does_not_fail_in_python(tmp_path):
+    path = tmp_path / "c.html"
+    path.write_text('<template><p></p></template><script type="module">export const component = { a: };</script>', encoding="utf-8")
+
+    @solara_html.component_html(str(path))
+    def Html():
+        pass
 
 
 def test_property_and_event_names(tmp_path):
@@ -125,9 +139,9 @@ def test_property_and_event_names(tmp_path):
 
     original = module._module_code
 
-    def spy(component, prop_names, event_names):
+    def spy(component, modules, prop_names, event_names):
         seen["props"], seen["events"] = prop_names, event_names
-        return original(component, prop_names, event_names)
+        return original(component, modules, prop_names, event_names)
 
     module._module_code = spy
     try:

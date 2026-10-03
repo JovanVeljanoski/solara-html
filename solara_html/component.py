@@ -11,7 +11,7 @@ import ipyreact
 import traitlets
 
 from solara.server.reload import watch_file
-from solara_html.imports import define_imports, inline_css_imports, module_name
+from solara_html.imports import ScriptModule, bundle_imports, inline_css_imports, module_name
 from solara_html.parse import ComponentFile, parse_component_file
 
 RUNTIME_MODULE = "solara-html"
@@ -44,8 +44,10 @@ def component_html(path: str) -> Callable[[Callable[..., None]], Callable[..., A
         arguments = list(signature.parameters)
         prop_names = [n for n in arguments if n != "children" and not n.startswith("event_") and not (n.startswith("on_") and n[len("on_") :] in arguments)]
         event_names = [n[len("event_") :] for n in arguments if n.startswith("event_")]
-        # Imported files are defined first, because a module can only import modules defined before it.
-        code = define_imports(_module_code(component, prop_names, event_names), component_path)
+        # The script and the files it imports go to the browser as text. The runtime loads them, so that an error in
+        # one of them shows in this component and does not stop the page.
+        modules = bundle_imports(component.script, component_path) if component.script else []
+        code = _module_code(component, modules, prop_names, event_names)
         module = module_name(code)
         ipyreact.define_module(module, code=code)
         widget_class = _widget_from_signature(func.__name__ + "Widget", signature)
@@ -118,19 +120,16 @@ def _native_slots(template: str) -> str:
     return _SLOT_CLOSE.sub("</component>", _SLOT_OPEN.sub("<component :is=\"'slot'\"", template))
 
 
-def _module_code(component: ComponentFile, prop_names: list[str], event_names: list[str]) -> str:
-    """The component's own script, plus an export that hands its parts to the runtime.
-
-    Imports are hoisted, so appending one after the user's code is valid.
-    The script may export `component`, a Vue options object.
-    """
-    return f"""{component.script or ""}
-import {{ defineHtmlComponent }} from "{RUNTIME_MODULE}";
-export const Component = defineHtmlComponent({{
-  template: {json.dumps(component.template)},
-  css: {json.dumps(component.css)},
-  component: typeof component === "object" ? component : null,
-  propNames: {json.dumps(prop_names)},
-  eventNames: {json.dumps(event_names)},
-}});
+def _module_code(component: ComponentFile, modules: list[ScriptModule], prop_names: list[str], event_names: list[str]) -> str:
+    """The ipyreact module for one component. It holds data only, no user code, so it always loads."""
+    spec = {
+        "template": component.template,
+        "css": component.css,
+        "modules": [{"id": m.id, "file": m.file, "code": m.code, "imports": list(m.imports)} for m in modules],
+        "entry": modules[-1].id if modules else None,
+        "propNames": prop_names,
+        "eventNames": event_names,
+    }
+    return f"""import {{ defineHtmlComponent }} from "{RUNTIME_MODULE}";
+export const Component = defineHtmlComponent({json.dumps(spec)});
 """

@@ -1,5 +1,8 @@
 """Relative imports in component scripts: each imported file becomes its own ES module.
 
+The browser runtime loads these modules itself, from the source text, so that an error in one file stays in
+its component. (A module that ipyreact loads and that fails would stop every widget on the page.)
+
 Only static imports are rewritten. A dynamic `import("./x.js")` is left as is, and does not work.
 Comments and string literals are skipped, so an import inside them is not rewritten.
 Regular expression literals are not understood: a quote or `//` inside one can hide the code after it.
@@ -10,11 +13,11 @@ rewritten, because a regular expression cannot track that nesting.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
-
-import ipyreact
 
 from solara.server.reload import watch_file
 
@@ -61,29 +64,46 @@ def rewrite_relative_imports(code: str, to_name: Callable[[str], str]) -> str:
     return _RELATIVE_IMPORT.sub(replace, code)
 
 
-def define_imports(code: str, importer: Path) -> str:
-    """Define the files that `code` imports relatively, depth-first, and return the rewritten code.
+@dataclass(frozen=True)
+class ScriptModule:
+    """One JavaScript file for the runtime. Its relative imports are replaced by the ids of the modules they name."""
 
-    Each file is defined once, before the modules that import it, and is watched for hot reload.
+    id: str
+    file: str  # for messages: the path relative to the component file
+    code: str
+    imports: tuple[str, ...]  # the ids of the modules this one imports, in order
+
+
+def bundle_imports(code: str, importer: Path) -> list[ScriptModule]:
+    """The script `code` and every file it imports relatively, in dependency order (the script is last).
+
+    Each file is listed once and is watched for hot reload.
     """
-    return _define_imports(code, importer.resolve(), {}, (importer.resolve(),))
+    importer = importer.resolve()
+    modules: dict[Path, ScriptModule] = {}
+    _bundle(code, importer, importer.name + " (script)", importer.parent, modules, (importer,))
+    return list(modules.values())
 
 
-def _define_imports(code: str, importer: Path, defined: dict[Path, str], stack: tuple[Path, ...]) -> str:
+def _bundle(code: str, importer: Path, file: str, root: Path, modules: dict[Path, ScriptModule], stack: tuple[Path, ...]) -> None:
+    imports: list[str] = []
+
     def to_name(specifier: str) -> str:
         path = (importer.parent / specifier).resolve()
         if path in stack:
             raise ValueError("import cycle: " + " -> ".join(str(p) for p in stack[stack.index(path) :] + (path,)))
-        if path not in defined:
+        if path not in modules:
             if not path.is_file():
                 raise ValueError(f"{importer}: imported file {specifier!r} does not exist ({path})")
             watch_file(path)
-            rewritten = _define_imports(path.read_text(encoding="utf-8"), path, defined, stack + (path,))
-            defined[path] = module_name(rewritten)
-            ipyreact.define_module(defined[path], code=rewritten)
-        return defined[path]
+            _bundle(path.read_text(encoding="utf-8"), path, os.path.relpath(path, root), root, modules, stack + (path,))
+        name = modules[path].id
+        if name not in imports:
+            imports.append(name)
+        return name
 
-    return rewrite_relative_imports(code, to_name)
+    rewritten = rewrite_relative_imports(code, to_name)
+    modules[importer] = ScriptModule(id=module_name(rewritten), file=file, code=rewritten, imports=tuple(imports))
 
 
 # `@import "./a.css";` and `@import url("./a.css");`, with a relative path. Remote and absolute URLs are left alone.

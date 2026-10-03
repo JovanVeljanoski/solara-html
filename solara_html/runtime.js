@@ -3,6 +3,7 @@
 // Every component file becomes a Vue 3 app that lives in a shadow root. This module
 // - connects the Python traits (ipyreact props) to Vue state, and Vue state back to Python,
 // - turns each Python event into a method of the Vue component,
+// - loads the component's script (and the files it imports) itself, so that an error in them stays in the component,
 // - guards the DOM against unsafe attributes and provides the safe `v-safe-html` directive.
 import * as React from "react";
 import { createApp, reactive, toRaw, watch } from "solara-html-vue";
@@ -10,7 +11,7 @@ import { createApp, reactive, toRaw, watch } from "solara-html-vue";
 // Returns the React component for one HTML component file.
 // ipyreact passes each trait as a prop, a set<Name> setter per trait,
 // each Python event as a callable prop, and the widget children.
-export function defineHtmlComponent({ template, css, component, propNames, eventNames }) {
+export function defineHtmlComponent({ template, css, modules, entry, propNames, eventNames }) {
   return function HtmlComponent(props) {
     const hostRef = React.useRef(null);
     const propsRef = React.useRef(props);
@@ -38,16 +39,33 @@ export function defineHtmlComponent({ template, css, component, propNames, event
       };
 
       let app = null;
-      try {
-        app = mountApp({ container, template, component, propNames, eventNames, propsRef, report });
-      } catch (error) {
-        // A template or script error must not break the rest of the page. Show it where the component should be.
-        console.error("solara-html: cannot mount the component", error);
-        report(`solara-html: cannot mount the component\n${error?.message ?? error}`);
+      let cancelled = false;
+      const start = (component) => {
+        try {
+          app = mountApp({ container, template, component, propNames, eventNames, propsRef, report });
+        } catch (error) {
+          // A template error must not break the rest of the page. Show it where the component should be.
+          console.error("solara-html: cannot mount the component", error);
+          report(`solara-html: cannot mount the component\n${error?.message ?? error}`);
+        }
+        appRef.current = app;
+      };
+      if (entry === null) {
+        start(null);
+      } else {
+        loadScript(modules, entry).then(
+          (component) => {
+            if (!cancelled) start(component);
+          },
+          (error) => {
+            console.error("solara-html: cannot load the script", error);
+            if (!cancelled) report(`solara-html: cannot load the script\n${error?.message ?? error}`);
+          },
+        );
       }
-      appRef.current = app;
       const stopGuard = guardDom(root);
       return () => {
+        cancelled = true;
         stopGuard();
         app?.dispose();
         appRef.current = null;
@@ -60,6 +78,53 @@ export function defineHtmlComponent({ template, css, component, propNames, event
     // Children stay in the light DOM; the browser shows them at the template's <slot>.
     return React.createElement("div", { ref: hostRef }, props.children);
   };
+}
+
+// --- The component's script ----------------------------------------------------------------------------------------
+
+// Python sends the script, and the files it imports, as text. Each becomes a blob module, loaded with `importShim`
+// (the loader of ipyreact), so that bare imports such as "react" resolve as they do for any ipyreact module.
+// A module is loaded once per page. The result, a failure too, is kept by the id, which comes from the content.
+const loadedModules = new Map();
+const moduleFiles = new Map(); // blob URL -> file name, to name the file in error messages
+
+
+function loadModule(id, byId) {
+  if (!loadedModules.has(id)) {
+    loadedModules.set(
+      id,
+      (async () => {
+        const module = byId.get(id);
+        const dependencies = await Promise.all(module.imports.map((dependency) => loadModule(dependency, byId)));
+        let code = module.code;
+        module.imports.forEach((dependency, index) => (code = code.split(dependency).join(dependencies[index].url)));
+        const url = URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
+        moduleFiles.set(url, module.file);
+        try {
+          return { url, namespace: await (globalThis.importShim ? globalThis.importShim(url) : import(/* webpackIgnore: true */ url)) };
+        } catch (error) {
+          throw new Error(`${module.file}: ${describe(error, module.imports.map((dependency) => byId.get(dependency).file))}`);
+        }
+      })(),
+    );
+  }
+  return loadedModules.get(id);
+}
+
+// The browser names a module by its blob URL. Say the file name instead. When ipyreact's loader rewrote the module,
+// the URL in the message is one of its own, and the file is one of the imported files.
+function describe(error, importedFiles) {
+  let text = `${error?.name && error.name !== "Error" ? error.name + ": " : ""}${error?.message ?? error}`;
+  for (const [url, file] of moduleFiles) text = text.split(url).join(file);
+  if (importedFiles.length) text = text.replace(/'blob:[^']*'/g, `'${importedFiles.join("' or '")}'`);
+  return text;
+}
+
+async function loadScript(modules, entry) {
+  const byId = new Map(modules.map((module) => [module.id, module]));
+  const { namespace } = await loadModule(entry, byId);
+  if (namespace.component === undefined) warn(`${byId.get(entry).file} does not export "component"`);
+  return namespace.component !== null && typeof namespace.component === "object" ? namespace.component : null;
 }
 
 // A copy that the app can change without changing the object that ipyreact holds for the widget.
