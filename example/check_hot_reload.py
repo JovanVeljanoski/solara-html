@@ -3,7 +3,7 @@
 It copies the greeting example to a temporary directory, starts `solara run` there without `--production`,
 edits greeting.html and then format.js (a relative import), and expects the open page to show each edit.
 It then breaks each script on purpose, expects an error that names the file (and no other change to the page),
-and fixes it again.
+and fixes it again. Last, it misspells a name in the template and expects the warning of Vue's development build.
 Run it with `python example/check_hot_reload.py`.
 """
 
@@ -91,6 +91,13 @@ def main():
                 html.write_text(good_html)
                 expect(heading).to_have_text("Howdy, World", timeout=15_000)
                 expect(page.locator("pre:visible")).to_have_count(0)
+
+                # The development build of Vue warns about a name that the template cannot find.
+                with page.expect_console_message(lambda message: 'Property "nme"' in message.text, timeout=15_000) as warning:
+                    html.write_text(good_html.replace("{{ name }}", "{{ nme }}", 1))
+                assert warning.value.text.startswith("solara-html: "), warning.value.text
+                html.write_text(good_html)
+                expect(heading).to_have_text("Howdy, World", timeout=15_000)
 
                 browser.close()
         finally:

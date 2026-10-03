@@ -130,6 +130,21 @@ def test_a_script_syntax_error_does_not_fail_in_python(tmp_path):
         pass
 
 
+@pytest.mark.parametrize("mode, file", [("production", "vue.esm-browser.prod.js"), ("development", "vue.esm-browser.js")])
+def test_vue_build_follows_the_solara_mode(mode, file):
+    from solara.server import settings
+
+    from solara_html.component import _vue_file
+
+    before = settings.main.mode
+    settings.main.mode = mode
+    try:
+        assert _vue_file().name == file
+        assert _vue_file().is_file()
+    finally:
+        settings.main.mode = before
+
+
 def test_split_arguments():
     from solara_html.component import _split_arguments
 

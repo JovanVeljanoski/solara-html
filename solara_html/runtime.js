@@ -195,6 +195,8 @@ function mountApp({ container, template, component, propNames, eventNames, props
     computed,
     methods,
   });
+  // Only the development build of Vue warns (about a name that does not exist in the template, for example).
+  app.config.warnHandler = (message, _instance, trace) => warn(`${message}${trace}`);
   app.config.errorHandler = (error, _instance, info) => {
     // In the production build of Vue, `info` is a link to its error reference, not a name.
     console.error("solara-html: error in the template or script", error);

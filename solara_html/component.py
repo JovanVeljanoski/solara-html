@@ -10,6 +10,7 @@ from typing import Any, Callable
 import ipyreact
 import traitlets
 
+from solara.server import settings
 from solara.server.reload import watch_file
 from solara_html.imports import ScriptModule, bundle_imports, inline_css_imports, module_name
 from solara_html.parse import ComponentFile, parse_component_file
@@ -17,9 +18,18 @@ from solara_html.parse import ComponentFile, parse_component_file
 RUNTIME_MODULE = "solara-html"
 VUE_MODULE = "solara-html-vue"
 
+
+def _vue_file() -> Path:
+    """The vendored Vue build with the template compiler (see vendor/README.md).
+
+    In development mode it is the build that warns about mistakes in a template, such as a name that does not exist.
+    """
+    development = settings.main.mode == "development"
+    return Path(__file__).parent / "vendor" / ("vue.esm-browser.js" if development else "vue.esm-browser.prod.js")
+
+
 # Both are defined once, before any component module, so those can import them by name.
-# Vue is the vendored `vue.esm-browser.prod.js` (the build with the template compiler); see vendor/README.md.
-ipyreact.define_module(VUE_MODULE, Path(__file__).parent / "vendor" / "vue.esm-browser.prod.js")
+ipyreact.define_module(VUE_MODULE, _vue_file())
 ipyreact.define_module(RUNTIME_MODULE, Path(__file__).parent / "runtime.js")
 
 
