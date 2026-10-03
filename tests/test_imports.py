@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 import solara_html.imports
-from solara_html.imports import define_imports, module_name, rewrite_relative_imports
+from solara_html.imports import define_imports, inline_css_imports, module_name, rewrite_relative_imports
 
 
 def test_rewrite_static_relative_imports_only():
@@ -113,3 +113,41 @@ def test_define_imports_cycle(tmp_path: Path, define_module):
 def test_module_name_is_by_content():
     assert module_name("export const a = 1;") == module_name("export const a = 1;")
     assert module_name("export const a = 1;") != module_name("export const a = 2;")
+
+
+def test_inline_css_imports(tmp_path: Path):
+    (tmp_path / "shared").mkdir()
+    (tmp_path / "shared" / "base.css").write_text(".a { color: red; }", encoding="utf-8")
+    (tmp_path / "buttons.css").write_text('@import "./shared/base.css";\n.b { color: blue; }', encoding="utf-8")
+
+    with unittest.mock.patch.object(solara_html.imports, "watch_file") as watch_file:
+        css = inline_css_imports('@import "./buttons.css";\n@import url(\'./shared/base.css\');\n.c { color: green; }', tmp_path / "main.html")
+
+    assert css == ".a { color: red; }\n.b { color: blue; }\n.a { color: red; }\n.c { color: green; }"
+    watched = {call.args[0] for call in watch_file.call_args_list}
+    assert watched == {(tmp_path / "buttons.css").resolve(), (tmp_path / "shared" / "base.css").resolve()}
+
+
+def test_inline_css_imports_leaves_remote_and_absolute_imports(tmp_path: Path):
+    css = '@import "https://example.com/a.css";\n@import url(/static/public/b.css);'
+
+    assert inline_css_imports(css, tmp_path / "main.html") == css
+
+
+def test_inline_css_imports_missing_file_names_importer(tmp_path: Path):
+    with pytest.raises(ValueError, match=r"main\.html: imported file './missing.css' does not exist"):
+        inline_css_imports('@import "./missing.css";', tmp_path / "main.html")
+
+
+def test_inline_css_imports_cycle(tmp_path: Path):
+    (tmp_path / "a.css").write_text('@import "./b.css";', encoding="utf-8")
+    (tmp_path / "b.css").write_text('@import "./a.css";', encoding="utf-8")
+
+    with unittest.mock.patch.object(solara_html.imports, "watch_file"), pytest.raises(ValueError, match="CSS import cycle"):
+        inline_css_imports('@import "./a.css";', tmp_path / "main.html")
+
+
+def test_inline_css_imports_ignores_comments(tmp_path: Path):
+    css = '/* use @import "./missing.css"; here */\n.a { color: red; }'
+
+    assert inline_css_imports(css, tmp_path / "main.html") == css

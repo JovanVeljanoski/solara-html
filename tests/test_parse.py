@@ -19,13 +19,13 @@ def test_parse_optional_style_and_module_script(tmp_path: Path):
     path.write_text(
         """
 <template>
-  <button data-solara-event-click="reset">Reset</button>
+  <button @click="reset()">Reset</button>
 </template>
 <style>
   button { color: rebeccapurple; }
 </style>
 <script type="module">
-  export function mount() {}
+  export const component = {};
 </script>
 """.strip(),
         encoding="utf-8",
@@ -33,9 +33,9 @@ def test_parse_optional_style_and_module_script(tmp_path: Path):
 
     component = parse_component_file(path)
 
-    assert 'data-solara-event-click="reset"' in component.template
+    assert '@click="reset()"' in component.template
     assert component.css == "\n  button { color: rebeccapurple; }\n"
-    assert component.script == "\n  export function mount() {}\n"
+    assert component.script == "\n  export const component = {};\n"
 
 
 def test_parse_nested_template(tmp_path: Path):
@@ -67,7 +67,7 @@ def test_parse_style_with_attributes(tmp_path: Path):
 
 def test_parse_rejects_classic_script(tmp_path: Path):
     path = tmp_path / "hello.html"
-    path.write_text("<template><p>Hi</p></template><script>export function mount() {}</script>", encoding="utf-8")
+    path.write_text("<template><p>Hi</p></template><script>export const component = {};</script>", encoding="utf-8")
 
     with pytest.raises(ValueError, match='type="module"'):
         parse_component_file(path)
@@ -158,6 +158,6 @@ def test_parse_end_tag_in_raw_text_element(tmp_path: Path, tag: str):
 
 def test_parse_unquoted_module_script(tmp_path: Path):
     path = tmp_path / "hello.html"
-    path.write_text("<template><p>Hi</p></template>\n<script type=module>export function mount() {}</script>", encoding="utf-8")
+    path.write_text("<template><p>Hi</p></template>\n<script type=module>export const component = {};</script>", encoding="utf-8")
 
-    assert parse_component_file(path).script == "export function mount() {}"
+    assert parse_component_file(path).script == "export const component = {};"

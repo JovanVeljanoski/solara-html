@@ -84,3 +84,33 @@ def _define_imports(code: str, importer: Path, defined: dict[Path, str], stack: 
         return defined[path]
 
     return rewrite_relative_imports(code, to_name)
+
+
+# `@import "./a.css";` and `@import url("./a.css");`, with a relative path. Remote and absolute URLs are left alone.
+# A comment is matched too, so that an `@import` written inside one is left alone.
+_CSS_IMPORT = re.compile(r"""(?P<comment>/\*.*?\*/)|@import\s+(?:url\(\s*)?(?P<quote>["'])(?P<specifier>\.\.?/[^"'\n]*)(?P=quote)\s*\)?\s*;""", re.DOTALL)
+
+
+def inline_css_imports(css: str, importer: Path) -> str:
+    """Replace each relative `@import` in `css` with the content of the file, and watch the file for hot reload.
+
+    A stylesheet that the page builds from text (as the component's shadow root does) ignores `@import`, so the files are
+    inlined here. `url(...)` inside the files is not rewritten: it resolves against the page, so use absolute paths there.
+    """
+    return _inline_css_imports(css, importer.resolve(), (importer.resolve(),))
+
+
+def _inline_css_imports(css: str, importer: Path, stack: tuple[Path, ...]) -> str:
+    def replace(match: re.Match[str]) -> str:
+        if match.group("comment"):
+            return match.group("comment")
+        specifier = match.group("specifier")
+        path = (importer.parent / specifier).resolve()
+        if path in stack:
+            raise ValueError("CSS import cycle: " + " -> ".join(str(p) for p in stack[stack.index(path) :] + (path,)))
+        if not path.is_file():
+            raise ValueError(f"{importer}: imported file {specifier!r} does not exist ({path})")
+        watch_file(path)
+        return _inline_css_imports(path.read_text(encoding="utf-8"), path, stack + (path,))
+
+    return _CSS_IMPORT.sub(replace, css)

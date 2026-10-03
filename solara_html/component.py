@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import inspect
 import json
+import re
 from pathlib import Path
 from typing import Any, Callable
 
@@ -10,12 +11,15 @@ import ipyreact
 import traitlets
 
 from solara.server.reload import watch_file
-from solara_html.imports import define_imports, module_name
+from solara_html.imports import define_imports, inline_css_imports, module_name
 from solara_html.parse import ComponentFile, parse_component_file
 
 RUNTIME_MODULE = "solara-html"
+VUE_MODULE = "solara-html-vue"
 
-# Defined once, before any component module, so those can import it by name.
+# Both are defined once, before any component module, so those can import them by name.
+# Vue is the vendored `vue.esm-browser.prod.js` (the build with the template compiler); see vendor/README.md.
+ipyreact.define_module(VUE_MODULE, Path(__file__).parent / "vendor" / "vue.esm-browser.prod.js")
 ipyreact.define_module(RUNTIME_MODULE, Path(__file__).parent / "runtime.js")
 
 
@@ -23,15 +27,25 @@ def component_html(path: str) -> Callable[[Callable[..., None]], Callable[..., A
     """Turn a function signature plus a single-file HTML component into a Solara component.
 
     The path is relative to the file of the decorated function.
-    A change to that file, or to a file its script imports, reloads the app.
+    A change to that file, or to a file it imports, reloads the app.
     """
 
     def decorator(func: Callable[..., None]) -> Callable[..., Any]:
         signature = inspect.signature(func)
         component_path = (Path(inspect.getfile(func)).parent / path).resolve()
         watch_file(component_path)
+        component = parse_component_file(component_path)
+        _check_template(component.template, component_path)
+        component = ComponentFile(
+            template=_native_slots(component.template),
+            css=inline_css_imports(component.css, component_path) if component.css else None,
+            script=component.script,
+        )
+        arguments = list(signature.parameters)
+        prop_names = [n for n in arguments if n != "children" and not n.startswith("event_") and not (n.startswith("on_") and n[len("on_") :] in arguments)]
+        event_names = [n[len("event_") :] for n in arguments if n.startswith("event_")]
         # Imported files are defined first, because a module can only import modules defined before it.
-        code = define_imports(_module_code(parse_component_file(component_path)), component_path)
+        code = define_imports(_module_code(component, prop_names, event_names), component_path)
         module = module_name(code)
         ipyreact.define_module(module, code=code)
         widget_class = _widget_from_signature(func.__name__ + "Widget", signature)
@@ -83,16 +97,40 @@ def _widget_from_signature(class_name: str, signature: inspect.Signature) -> typ
     return type(class_name, (ipyreact.Widget,), properties)
 
 
-def _module_code(component: ComponentFile) -> str:
+_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+# `v-html` and a binding to `innerHTML` or `outerHTML` put text in the page as markup. `v-safe-html` cleans it first.
+_RAW_HTML_BINDING = re.compile(r"(?<![\w-])(?:v-html|(?:v-bind)?:\.?(?:innerhtml|outerhtml))(?![\w-])", re.IGNORECASE)
+
+
+def _check_template(template: str, path: Path) -> None:
+    match = _RAW_HTML_BINDING.search(_COMMENT.sub("", template))
+    if match:
+        raise ValueError(f"{path}: {match.group(0)!r} is not allowed because it inserts unchecked markup; use v-safe-html")
+
+
+# Vue reads `<slot>` as a Vue slot outlet and drops it. A dynamic component named "slot" gives the native element,
+# which shows the Python children (they stay in the light DOM) inside the shadow root.
+_SLOT_OPEN = re.compile(r"<slot(?=[\s/>])")
+_SLOT_CLOSE = re.compile(r"</slot\s*>")
+
+
+def _native_slots(template: str) -> str:
+    return _SLOT_CLOSE.sub("</component>", _SLOT_OPEN.sub("<component :is=\"'slot'\"", template))
+
+
+def _module_code(component: ComponentFile, prop_names: list[str], event_names: list[str]) -> str:
     """The component's own script, plus an export that hands its parts to the runtime.
 
     Imports are hoisted, so appending one after the user's code is valid.
+    The script may export `component`, a Vue options object.
     """
     return f"""{component.script or ""}
 import {{ defineHtmlComponent }} from "{RUNTIME_MODULE}";
 export const Component = defineHtmlComponent({{
   template: {json.dumps(component.template)},
   css: {json.dumps(component.css)},
-  mount: typeof mount === "function" ? mount : null,
+  component: typeof component === "object" ? component : null,
+  propNames: {json.dumps(prop_names)},
+  eventNames: {json.dumps(event_names)},
 }});
 """
