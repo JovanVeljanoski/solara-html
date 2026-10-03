@@ -194,7 +194,7 @@ Treat the template as code you wrote, and values from Python or users as untrust
 
 It runs on [ipyreact](https://github.com/widgetti/ipyreact) ES modules, which Solara already supports:
 
-1. At import, the package defines two shared ES modules with `ipyreact.define_module`: Vue 3 (a copy of the full browser build, see [solara_html/vendor](solara_html/vendor/README.md)) and `solara-html` ([runtime.js](solara_html/runtime.js)).
+1. At import, the package defines two shared ES modules with `ipyreact.define_module`: Vue 3 (a copy of the full browser build, the production or the development build by the Solara mode, see [solara_html/vendor](solara_html/vendor/README.md)) and `solara-html` ([runtime.js](solara_html/runtime.js)).
    Vue runs from its own ES module, so it does not touch the Vue on the Solara page, whether that is Vue 2 or 3.
 2. The decorator turns each `.html` file into its own small ES module that holds data only: the template, the CSS, the prop and event names, and the text of the script and of every file it imports.
    The module is named by a hash of its code, so an edit shows up live after a hot reload. Each edit defines a new data module; old ones stay until the server restarts (only in development mode, where files change).
@@ -210,6 +210,9 @@ The browser receives each component's code once per page, not once per instance.
 
 ## Errors
 
+- In development mode (`solara run` without `--production`), the browser console also warns about mistakes that would otherwise show as an empty spot,
+  such as a name in the template that does not exist (`solara-html: [Vue warn]: Property "nme" was accessed during render but is not defined`).
+  Production mode uses a smaller Vue build without these warnings. Look at the console in development mode first.
 - A mistake in the template or in a method shows as a red message in the component, and the page keeps working. The browser console has the stack.
 - A JavaScript error in a component's `<script>` or in a file it imports (a syntax error, a missing export, an error thrown while the file runs) shows in that component as `file name: error`, and the other components keep working. The browser reports no line number for a syntax error, so open the named file.
 - A script that does not export `component` logs a `solara-html:` warning in the console. The template still shows.
@@ -225,7 +228,7 @@ Props and event data travel as JSON, through the widget channel.
 - Python cannot call a method in the browser. To tell the browser to do something (focus an input, play a sound), send a value it can react to,
   such as a counter prop with a `watch` in the script.
 - Every change to a list or dict prop copies and compares the whole value. That is fine for hundreds of rows, not for tens of thousands.
-- The package sends Vue (about 173 KB, 63 KB gzipped), the runtime and every component to the browser once per page, through the widget channel.
+- The package sends Vue (about 173 KB, 63 KB gzipped; the development build is 564 KB), the runtime and every component to the browser once per page, through the widget channel.
 
 ## Limits
 

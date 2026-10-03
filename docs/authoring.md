@@ -139,6 +139,7 @@ Use a local `data()` field for the draft, and assign the prop only on `@change`,
 
 | You see | Cause |
 | --- | --- |
+| A part of the page is empty, or a value is missing | Run in development mode (`solara run app.py`, not `--production`) and read the browser console. Vue warns there, for example `Property "nme" was accessed during render but is not defined`. |
 | A red message `some.js: SyntaxError: ...` (or `page.html (script): ...`) | A JavaScript error in that file: a syntax error, an import of a name the file does not export, or an error thrown while it runs. The message names the file. There is no line number for a syntax error, so open that file. |
 | The template shows but the script seems not to run, and the console has `does not export "component"` | The script needs `export const component = {...}`. |
 | A red message in place of the component | A template or script error. The message says what failed. The browser console has the stack. |
