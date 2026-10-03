@@ -1,12 +1,12 @@
 <template>
-  <section class="beacon">
+  <section class="beacon" :style="beaconStyle">
     <div class="topline">
       <span class="eyebrow">BEACON LAB / LIVE SIGNAL</span>
       <span class="live"><i></i> ON AIR</span>
     </div>
 
-    <h2 data-solara-text="title"></h2>
-    <p class="subline" data-solara-text="status"></p>
+    <h2>{{ title }}</h2>
+    <p class="subline">{{ status }}</p>
 
     <div class="scope" aria-label="Animated signal display">
       <div class="grid"></div>
@@ -14,24 +14,33 @@
       <div class="orbit orbit-two"></div>
       <div class="orbit orbit-three"></div>
       <div class="sweep"></div>
-      <div class="wave"></div>
+      <div class="wave" ref="wave"></div>
       <div class="core"><span></span></div>
       <div class="scope-label">SIGNAL ACTIVE</div>
-      <div class="scope-number" data-solara-text="intensity"></div>
+      <div class="scope-number">{{ intensity }}</div>
     </div>
 
     <div class="details">
       <label class="field">
         <span>CALL SIGN <small>COMMITS AFTER A PAUSE / ENTER / BLUR</small></span>
-        <input type="text" maxlength="18" spellcheck="false">
+        <input
+          type="text"
+          maxlength="18"
+          spellcheck="false"
+          v-model="draft"
+          @input="schedule"
+          @blur="commit"
+          @keydown.enter="finish"
+          @keydown.esc="revert"
+        />
       </label>
       <div class="counter">
         <span>TRANSMISSIONS</span>
-        <strong data-solara-text="transmissions"></strong>
+        <strong>{{ transmissions }}</strong>
       </div>
     </div>
 
-    <button class="pulse-button" type="button" data-solara-event-click="pulse">
+    <button class="pulse-button" type="button" @click="pulse()">
       <span class="pulse-icon">◉</span> Send a pulse <span aria-hidden="true">↗</span>
     </button>
 
@@ -97,60 +106,58 @@
 </style>
 
 <script type="module">
-  export function mount({ root, get, set, subscribe }) {
-    const panel = root.querySelector('.beacon');
-    const wave = root.querySelector('.wave');
-    const callsignInput = root.querySelector('.field input');
-    let commitTimer;
-
-    const paint = () => {
-      const power = Math.max(0, Math.min(100, Number(get('intensity')) || 0));
-      panel.style.setProperty('--hue', String(get('hue')));
-      panel.style.setProperty('--power', String(power / 100));
-      panel.style.setProperty('--speed', `${18 - power * .11}s`);
-    };
-    const pulse = () => {
-      wave.classList.remove('travel');
-      void wave.offsetWidth;
-      wave.classList.add('travel');
-    };
-    const commitCallsign = () => {
-      clearTimeout(commitTimer);
-      set('callsign', callsignInput.value);
-    };
-    const scheduleCallsign = () => {
-      clearTimeout(commitTimer);
-      commitTimer = setTimeout(commitCallsign, 500);
-    };
-    const onCallsignKeydown = (event) => {
-      if (event.key === 'Enter') {
-        commitCallsign();
-        callsignInput.blur();
-      } else if (event.key === 'Escape') {
-        clearTimeout(commitTimer);
-        callsignInput.value = get('callsign');
-        callsignInput.blur();
-      }
-    };
-
-    paint();
-    callsignInput.value = get('callsign');
-    callsignInput.addEventListener('input', scheduleCallsign);
-    callsignInput.addEventListener('blur', commitCallsign);
-    callsignInput.addEventListener('keydown', onCallsignKeydown);
-    const stopCallsign = subscribe('callsign', value => { callsignInput.value = value ?? ''; });
-    const stopIntensity = subscribe('intensity', paint);
-    const stopHue = subscribe('hue', paint);
-    const stopPulse = subscribe('transmissions', pulse);
-    return () => {
-      clearTimeout(commitTimer);
-      callsignInput.removeEventListener('input', scheduleCallsign);
-      callsignInput.removeEventListener('blur', commitCallsign);
-      callsignInput.removeEventListener('keydown', onCallsignKeydown);
-      stopCallsign();
-      stopIntensity();
-      stopHue();
-      stopPulse();
-    };
-  }
+  // The call sign is typed into a local `draft`. Python gets it only when the user commits it:
+  // after a pause, with Enter, or when the input loses focus.
+  export const component = {
+    data() {
+      return { draft: "", timer: null };
+    },
+    computed: {
+      power() {
+        return Math.max(0, Math.min(100, Number(this.intensity) || 0));
+      },
+      beaconStyle() {
+        return { "--hue": String(this.hue), "--power": String(this.power / 100), "--speed": `${18 - this.power * 0.11}s` };
+      },
+    },
+    watch: {
+      callsign: {
+        immediate: true,
+        handler(value) {
+          this.draft = value ?? "";
+        },
+      },
+      transmissions() {
+        this.travel();
+      },
+    },
+    methods: {
+      schedule() {
+        clearTimeout(this.timer);
+        this.timer = setTimeout(this.commit, 500);
+      },
+      commit() {
+        clearTimeout(this.timer);
+        if (this.draft !== this.callsign) this.callsign = this.draft;
+      },
+      finish(event) {
+        this.commit();
+        event.target.blur();
+      },
+      revert(event) {
+        clearTimeout(this.timer);
+        this.draft = this.callsign;
+        event.target.blur();
+      },
+      travel() {
+        const wave = this.$refs.wave;
+        wave.classList.remove("travel");
+        void wave.offsetWidth; // restart the CSS animation
+        wave.classList.add("travel");
+      },
+    },
+    beforeUnmount() {
+      clearTimeout(this.timer);
+    },
+  };
 </script>

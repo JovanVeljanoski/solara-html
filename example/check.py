@@ -17,7 +17,7 @@ def main(url: str = "http://localhost:8765", screenshot: str = "solara-html-demo
         name_input = page.locator(".card input")
         python_sees = page.locator("text=Python sees")
 
-        # data-solara-prop-disabled: Reset is disabled while the name is the default.
+        # `:disabled="is_default"`: Reset is disabled while the name is the default.
         reset_button = page.locator(".card button", has_text="Reset")
         expect(reset_button).to_be_disabled()
 

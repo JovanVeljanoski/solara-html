@@ -2,11 +2,11 @@
   <article class="card">
     <label class="field">
       <span>Name</span>
-      <input data-solara-model="name" placeholder="Your name" />
+      <input v-model="name" placeholder="Your name" @keydown.esc="name = 'World'" />
     </label>
-    <h2 data-solara-attr-title="name">Hello, <span data-solara-text="name"></span></h2>
-    <p class="count"></p>
-    <button type="button" data-solara-event-click="reset" data-solara-prop-disabled="is_default">Reset</button>
+    <h2 :title="name">Hello, <span>{{ name }}</span></h2>
+    <p class="count">{{ countLabel }}</p>
+    <button type="button" :disabled="is_default" @click="reset()">Reset</button>
     <div class="slot">
       <slot></slot>
     </div>
@@ -82,23 +82,12 @@
 <script type="module">
   import { characters } from "./format.js";
 
-  export function mount({root, get, set, subscribe}) {
-    const input = root.querySelector("input");
-    const count = root.querySelector(".count");
-    const updateCount = value => {
-      count.textContent = characters((value || "").length);
-    };
-    const onKeydown = event => {
-      if (event.key === "Escape") {
-        set("name", "World");
-      }
-    };
-    input.addEventListener("keydown", onKeydown);
-    const unsubscribe = subscribe("name", updateCount);
-    updateCount(get("name"));
-    return () => {
-      input.removeEventListener("keydown", onKeydown);
-      unsubscribe();
-    };
-  }
+  // A Vue options object. The Python props (name, is_default) are available as this.name and this.is_default.
+  export const component = {
+    computed: {
+      countLabel() {
+        return characters((this.name || "").length);
+      },
+    },
+  };
 </script>

@@ -1,0 +1,194 @@
+<!--
+  A quiz page in one file: a topic picker (a child component from topic_picker.js), v-if screens, events that carry
+  data, keyboard shortcuts, a modal dialog, watchers, and state that changes from timers.
+-->
+<template>
+  <div class="quiz">
+    <!-- Topic selection -->
+    <section v-if="!is_active" class="setup">
+      <h1>{{ page_header }}</h1>
+      <p v-if="topics.length" class="stats">{{ completedCount }} of {{ topics.length }} topics complete</p>
+
+      <topic-picker v-model="topic" :topics="topics" :done="topics_done" :disabled="loading"></topic-picker>
+
+      <div class="row">
+        <button type="button" class="btn primary" :disabled="loading || !topic.length" @click="handleStart(false)">Start quiz</button>
+        <button type="button" class="btn secondary" :disabled="loading || !topics.length" @click="handleStart(true)">Surprise me</button>
+      </div>
+      <p v-if="!topic.length" class="hint">Choose at least one topic to start.</p>
+    </section>
+
+    <!-- Question and answer -->
+    <section v-else class="lesson">
+      <div class="card">
+        <div class="kicker">{{ question_prompt }}</div>
+        <div class="term">{{ question }}</div>
+      </div>
+
+      <div class="field">
+        <input
+          ref="answerField"
+          v-model="userInput"
+          type="text"
+          :placeholder="listening ? 'Listening…' : 'Type your answer'"
+          :disabled="is_checked"
+        />
+        <button type="button" class="dictate" :class="{ listening }" :disabled="is_checked || listening" title="Say your answer (simulated)" @click="dictate">🎤</button>
+      </div>
+
+      <div v-if="!is_checked" class="row">
+        <button type="button" class="btn primary" :disabled="!userInput.trim()" @click="handleCheck">Check answer</button>
+      </div>
+      <div v-else class="row">
+        <button type="button" class="btn primary" @click="handleNext">Next question</button>
+      </div>
+
+      <progress class="progress" :value="progress" max="100"></progress>
+      <p class="hint">{{ Math.round(progress) }}% of this quiz complete</p>
+
+      <div v-if="is_checked" class="note" :class="is_correct ? 'success' : 'error'">
+        <strong>{{ is_correct ? 'That works.' : 'Not quite yet.' }}</strong>
+        <div>{{ message }}</div>
+      </div>
+
+      <div class="row end">
+        <button type="button" class="link" @click="confirmOpen = true">Cancel quiz</button>
+      </div>
+
+      <dialog ref="dialog" @close="confirmOpen = false">
+        <p>Cancel this quiz? Your progress in it is lost.</p>
+        <div class="row">
+          <button type="button" class="btn secondary" @click="confirmOpen = false">Keep going</button>
+          <button type="button" class="btn primary" @click="handleCancel">Cancel quiz</button>
+        </div>
+      </dialog>
+    </section>
+  </div>
+</template>
+
+<style>
+  @import "./buttons.css";
+
+  :host { display: block; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #1f2a37; }
+  .quiz { max-width: 36rem; margin: 0 auto; padding: 1rem; }
+  h1 { text-align: center; font-size: 1.6rem; }
+  .stats, .hint { text-align: center; color: #667085; font-size: 0.85rem; }
+  .row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+  .row > * { flex: 1; }
+  .row.end { justify-content: flex-end; }
+  .row.end > * { flex: 0 0 auto; }
+
+  /* The topic picker (topic_picker.js) shares this stylesheet. */
+  .combo { position: relative; margin-top: 1rem; }
+  .combo-field { display: flex; flex-wrap: wrap; gap: 0.35rem; border: 1px solid #9fb0c4; border-radius: 8px; padding: 0.5rem; background: #fff; }
+  .combo-field.disabled { opacity: 0.5; }
+  .combo-field input { flex: 1; min-width: 6rem; border: 0; outline: 0; font: inherit; }
+  .chip { display: inline-flex; align-items: center; gap: 0.25rem; background: #eef2f7; border-radius: 999px; padding: 0.15rem 0.6rem; font-size: 0.85rem; }
+  .chip.done { background: #e1f3ea; }
+  .chip-x { border: 0; background: none; cursor: pointer; font-size: 1rem; line-height: 1; }
+  .combo-list { position: absolute; z-index: 5; left: 0; right: 0; margin: 0.25rem 0 0; padding: 0.25rem; list-style: none; background: #fff; border: 1px solid #d7dee8; border-radius: 8px; max-height: 14rem; overflow: auto; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); }
+  .combo-list li { display: flex; justify-content: space-between; padding: 0.5rem 0.6rem; border-radius: 6px; cursor: pointer; }
+  .combo-list li:hover { background: #eef2f7; }
+  .combo-list li.selected { font-weight: 700; }
+  .combo-list .status, .combo-list .empty { color: #667085; font-size: 0.75rem; }
+
+  .card { background: #f6f8fb; border-radius: 16px; min-height: 12rem; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; }
+  .kicker { font-size: 0.9rem; color: #445; }
+  .term { font-size: 2rem; margin-top: 0.5rem; }
+  .field { position: relative; margin-top: 0.75rem; }
+  .field input { width: 100%; box-sizing: border-box; border: 1px solid #9fb0c4; border-radius: 8px; padding: 0.75rem 3rem 0.75rem 0.75rem; font: inherit; }
+  .dictate { position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); border: 0; background: none; cursor: pointer; font-size: 1.1rem; }
+  .dictate:disabled { opacity: 0.4; cursor: not-allowed; }
+  .dictate.listening { animation: pulse 1.4s infinite ease-in-out; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .progress { width: 100%; height: 11px; margin-top: 0.75rem; }
+  .note { border-radius: 12px; padding: 1rem; margin-top: 0.5rem; }
+  .note.success { color: #0b6b4f; background: #e1f3ea; }
+  .note.error { color: #b00020; background: #fdecec; }
+  .link { border: 0; background: none; color: #667085; text-decoration: underline; cursor: pointer; }
+  dialog { border: 0; border-radius: 16px; padding: 1.25rem; max-width: 26rem; }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
+</style>
+
+<script type="module">
+  import TopicPicker from "./topic_picker.js";
+
+  // Python props (topic, is_active, ...) are available as this.topic, this.is_active, ...
+  // Python events are methods: this.start(topics), this.check(answer), this.next(), this.cancel().
+  export const component = {
+    components: { TopicPicker },
+    data() {
+      return { userInput: "", confirmOpen: false, listening: false, timers: [] };
+    },
+    computed: {
+      completedCount() {
+        return this.topics_done.filter((done) => done === 1).length;
+      },
+    },
+    watch: {
+      // Showing a native <dialog> is a method call, so a watcher keeps it in step with the state.
+      confirmOpen(open) {
+        const dialog = this.$refs.dialog;
+        if (!dialog) return;
+        if (open && !dialog.open) dialog.showModal();
+        if (!open && dialog.open) dialog.close();
+      },
+      is_active(active) {
+        if (!active) this.stopDictation();
+      },
+    },
+    methods: {
+      handleStart(random) {
+        const chosen = random ? [this.topics[Math.floor(Math.random() * this.topics.length)]] : this.topic;
+        if (random) this.topic = chosen;
+        this.start(chosen);
+      },
+      handleCheck() {
+        this.check(this.userInput);
+      },
+      handleNext() {
+        this.userInput = "";
+        this.$nextTick(() => this.next());
+      },
+      handleCancel() {
+        this.confirmOpen = false;
+        this.userInput = "";
+        this.cancel();
+      },
+      // Simulated speech input: the text arrives later, from timers, not from a Vue event.
+      dictate() {
+        this.listening = true;
+        this.timers.push(setTimeout(() => (this.userInput = "ho"), 100));
+        this.timers.push(
+          setTimeout(() => {
+            this.userInput = "hola";
+            this.listening = false;
+            this.$refs.answerField?.focus();
+          }, 300),
+        );
+      },
+      stopDictation() {
+        this.timers.forEach(clearTimeout);
+        this.timers = [];
+        this.listening = false;
+      },
+      handleKeydown(event) {
+        if (event.key !== "Enter" || this.confirmOpen || this.loading) return;
+        if (!this.is_active && this.topic.length) this.handleStart(false);
+        else if (this.is_active && this.is_checked) this.handleNext();
+        else if (this.is_active && this.userInput.trim()) this.handleCheck();
+      },
+    },
+    mounted() {
+      // A listener on the document outlives this component unless it is removed.
+      document.addEventListener("keydown", this.handleKeydown);
+    },
+    updated() {
+      if (this.is_active && !this.is_checked) this.$refs.answerField?.focus();
+    },
+    beforeUnmount() {
+      document.removeEventListener("keydown", this.handleKeydown);
+      this.stopDictation();
+    },
+  };
+</script>

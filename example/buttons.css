@@ -1,0 +1,13 @@
+/* Shared by settings.html and quiz.html with `@import "./buttons.css";`. solara-html inlines it into each component. */
+.btn {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.primary { background: #235a97; color: #fff; }
+.btn.secondary { background: #e3ecf6; color: #235a97; }
+.btn.outline { background: transparent; border-color: #c0392b; color: #c0392b; }
