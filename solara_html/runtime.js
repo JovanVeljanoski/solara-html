@@ -5,7 +5,7 @@
 // - turns each Python event into a method of the Vue component,
 // - guards the DOM against unsafe attributes and provides the safe `v-safe-html` directive.
 import * as React from "react";
-import { createApp, reactive } from "solara-html-vue";
+import { createApp, reactive, toRaw, watch } from "solara-html-vue";
 
 // Returns the React component for one HTML component file.
 // ipyreact passes each trait as a prop, a set<Name> setter per trait,
@@ -27,18 +27,23 @@ export function defineHtmlComponent({ template, css, component, propNames, event
       // `display: contents` keeps this wrapper out of the layout.
       const container = document.createElement("div");
       container.style.display = "contents";
-      root.replaceChildren(container);
+      // Errors from the template or the script show here, because a console message is easy to miss.
+      const errorBox = document.createElement("pre");
+      errorBox.style.cssText = "color: #b00020; white-space: pre-wrap; font: 12px monospace; margin: 0;";
+      errorBox.hidden = true;
+      root.replaceChildren(errorBox, container);
+      const report = (message) => {
+        errorBox.textContent = message;
+        errorBox.hidden = false;
+      };
 
       let app = null;
       try {
-        app = mountApp({ container, template, component, propNames, eventNames, propsRef });
+        app = mountApp({ container, template, component, propNames, eventNames, propsRef, report });
       } catch (error) {
         // A template or script error must not break the rest of the page. Show it where the component should be.
         console.error("solara-html: cannot mount the component", error);
-        const message = document.createElement("pre");
-        message.style.cssText = "color: #b00020; white-space: pre-wrap; font: 12px monospace;";
-        message.textContent = `solara-html: cannot mount the component\n${error?.message ?? error}`;
-        container.replaceChildren(message);
+        report(`solara-html: cannot mount the component\n${error?.message ?? error}`);
       }
       appRef.current = app;
       const stopGuard = guardDom(root);
@@ -57,14 +62,51 @@ export function defineHtmlComponent({ template, css, component, propNames, event
   };
 }
 
-function mountApp({ container, template, component, propNames, eventNames, propsRef }) {
+// A copy that the app can change without changing the object that ipyreact holds for the widget.
+function clone(value) {
+  if (value === null || typeof value !== "object") return value;
+  try {
+    return structuredClone(toRaw(value));
+  } catch {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      return value; // not copyable (for example a circular object): use it as it is
+    }
+  }
+}
+
+function same(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return false;
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
+}
+
+function mountApp({ container, template, component, propNames, eventNames, propsRef, report }) {
   const props = propsRef.current;
   const state = reactive({});
-  for (const name of propNames) state[name] = props[name];
+  // `lastSent` is the value that Python and the browser last agreed on. A change to `state` that differs from it,
+  // such as `this.items.push(x)`, is sent to Python too.
+  const lastSent = {};
+  for (const name of propNames) {
+    state[name] = clone(props[name]);
+    lastSent[name] = clone(props[name]);
+  }
   // Python props show up at once when the browser writes them, and are then sent to Python.
   // A later render only replaces the local value when Python really changed the prop since
   // the last render, so a late echo of an old value cannot undo a newer write.
   const lastSeen = { ...props };
+
+  const send = (name) => {
+    lastSent[name] = clone(state[name]);
+    const setter = propsRef.current[setterName(name)];
+    if (typeof setter === "function") setter(clone(state[name]));
+    else warn(`cannot set "${name}": no setter`);
+  };
 
   const options = component || {};
   const computed = { ...(options.computed || {}) };
@@ -75,10 +117,8 @@ function mountApp({ container, template, component, propNames, eventNames, props
     computed[name] = {
       get: () => state[name],
       set: (value) => {
-        state[name] = value;
-        const setter = propsRef.current[setterName(name)];
-        if (typeof setter === "function") setter(value);
-        else warn(`cannot set "${name}": no setter`);
+        state[name] = clone(value);
+        send(name);
       },
     };
   }
@@ -101,6 +141,11 @@ function mountApp({ container, template, component, propNames, eventNames, props
     methods,
   });
   app.config.warnHandler = (message) => warn(message);
+  app.config.errorHandler = (error, _instance, info) => {
+    // In the production build of Vue, `info` is a link to its error reference, not a name.
+    console.error("solara-html: error in the template or script", error);
+    report(`solara-html: error in the template or script\n${error?.message ?? error}\n(${info})`);
+  };
   app.directive("safe-html", {
     mounted: (element, binding) => element.replaceChildren(...sanitizeHtml(binding.value)),
     updated: (element, binding) => {
@@ -109,16 +154,32 @@ function mountApp({ container, template, component, propNames, eventNames, props
   });
   app.mount(container);
 
+  // Watched after the mount, so that an assignment made while mounting is not sent twice.
+  // The callback runs once per tick, however many changes a method makes.
+  const stops = propNames.map((name) =>
+    watch(
+      () => state[name],
+      () => {
+        if (!same(state[name], lastSent[name])) send(name);
+      },
+      { deep: true },
+    ),
+  );
+
   return {
     update(next) {
       for (const name of propNames) {
         if (next[name] !== lastSeen[name]) {
           lastSeen[name] = next[name];
-          if (state[name] !== next[name]) state[name] = next[name];
+          if (!same(state[name], next[name])) state[name] = clone(next[name]);
+          lastSent[name] = clone(next[name]);
         }
       }
     },
-    dispose: () => app.unmount(),
+    dispose: () => {
+      stops.forEach((stop) => stop());
+      app.unmount();
+    },
   };
 }
 

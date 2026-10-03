@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "playwright", "typer", "markdown", "solara-server[starlette,dev]"]
+dev = ["pytest", "playwright", "typer", "solara-server[starlette,dev]"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["solara_html"]

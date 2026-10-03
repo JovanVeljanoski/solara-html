@@ -29,4 +29,6 @@ check_with_server beacon_app.py check_beacon.py
 check_with_server settings_app.py check_settings.py
 check_with_server quiz_app.py check_quiz.py
 check_with_server security_app.py check_security.py
+check_with_server todo_app.py check_todo.py
+check_with_server errors_app.py check_errors.py
 python example/check_hot_reload.py
