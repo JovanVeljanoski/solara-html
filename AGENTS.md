@@ -24,6 +24,7 @@ that exports a Vue options object named `component`. Vue 3 is the only engine. I
 - `solara_html/imports.py` - rewrites relative `import` statements in the script so each imported file becomes its own ES module, and inlines relative CSS `@import`s.
 - `solara_html/runtime.js` - the browser runtime: shadow root, the Vue app (props as reactive state, events as methods), the DOM guard, `v-safe-html`.
 - `solara_html/vendor/` - the Vue 3 browser build with the template compiler, and its license.
+- `docs/authoring.md` - the guide for writing components (for people and agents that use the package). Keep it in step with the README.
 - `tests/` - unit tests (no browser).
 - `example/` - example apps, each with a Playwright check (`check*.py`). Add a check for each new feature.
 - `scripts/run_browser_checks.sh` - runs all browser checks; CI uses it.

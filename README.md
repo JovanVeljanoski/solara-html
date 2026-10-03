@@ -85,6 +85,7 @@ Like in Solara, you change a prop by **assigning** it, and you call an event as 
 - The data of an event must be JSON (numbers, text, lists, dicts, `null`). The callback gets `None` when there is no data.
 - A bare `@click="reset"` is the same as `@click="reset($event)"`. Python cannot take a DOM event, so it receives `None`.
 - A write to a prop shows at once in the browser, then goes to Python. A fast typist is not behind a slow server.
+- A list or dict prop can be changed in place too (`this.items.push(x)`, or a checkbox bound to `item.done`): the change is sent to Python. An assignment (`this.items = [...this.items, x]`) is the clearer form. In Python, as in Solara, `items.value.append(x)` is not seen: set a new list.
 - The names must not collide with names in the template's own script: a prop or event with the same name as a `computed` or `methods` entry raises an error in the browser.
 
 Some argument names are reserved, and the decorator raises a `ValueError` for them:
@@ -95,6 +96,8 @@ Some argument names are reserved, and the decorator raises a `ValueError` for th
 
 `children=None` and `children=[]` both work.
 Only the default slot exists, because the children are widgets: write `<slot></slot>` (the package keeps it as a real `<slot>` element, so Vue does not drop it).
+
+Writing components with an LLM agent? Point it at [docs/authoring.md](docs/authoring.md): the contract, the rules, the traps and a recipe per case.
 
 ## The three parts of the file
 
@@ -170,7 +173,8 @@ The reload runs the decorator again only when the component is defined in a file
 
 Treat the template as code you wrote, and values from Python or users as untrusted.
 
-- `v-html`, and bindings to `innerHTML` / `outerHTML`, are refused when the decorator runs (`ValueError`). They put unchecked text in the page as markup.
+- `v-html`, and the direct bindings `:innerHTML` / `:outerHTML`, are refused when the decorator runs (`ValueError`). They put unchecked text in the page as markup.
+  This is a safety net for mistakes, not a wall: a dynamic form such as `v-bind="{ innerHTML: x }"` is not detected. The template is code you wrote, so review it like code.
 - `v-safe-html="text"` is the safe replacement. It parses the text without running anything, keeps a short list of tags and attributes (text formatting, lists, tables, links, images),
   drops scripts, frames, forms and event handlers, checks URLs, and adds `rel="noopener noreferrer"` to links.
 - A guard watches the component's DOM and removes `on*` attributes, `srcdoc`, and URLs in `href`, `src`, `action`, `formaction`, `poster`, `data` and `xlink:href`
@@ -194,9 +198,15 @@ It runs on [ipyreact](https://github.com/widgetti/ipyreact) ES modules, which So
    ipyreact waits until the module is loaded before it renders, and passes the traits, setters, events, and children to it as React props.
 4. The runtime renders a `div`, attaches a shadow root with the CSS, and mounts a Vue app there.
    The props are reactive state, with a getter and a setter each. The events are methods. Children stay in the light DOM, so the browser shows them at the `<slot>`.
-   If the template fails to compile, the shadow root shows the error.
+   If the template or the script fails, the shadow root shows the error.
 
 The browser receives each component's code once per page, not once per instance.
+
+## Errors
+
+- A mistake in the template or in a method shows as a red message in the component, and the page keeps working. The browser console has the stack.
+- A JavaScript **syntax** error in a component's `<script>` (or in a file it imports) stops the whole page from rendering, because the browser cannot load the module. The console shows `SyntaxError` without a file name. Check the file you changed last.
+- A mistake that Python can see raises a `ValueError` when the app starts, and the message names the file.
 
 ## Limits
 
@@ -229,6 +239,8 @@ then in a second shell `uv run python example/<check>.py --url http://localhost:
 | [beacon_app.py](example/beacon_app.py) | Two instances, a debounced input, watchers, lifecycle, Solara widgets in the slot | `check_beacon.py` |
 | [settings_app.py](example/settings_app.py) | `select`, checkbox, number validation, `v-if` chains, computed gating, a modal `<dialog>`, a slow server, a shared `@import`ed stylesheet | `check_settings.py` |
 | [quiz_app.py](example/quiz_app.py) | A child component (`topic_picker.js`), events with data, keyboard shortcuts, timers, a `<dialog>` | `check_quiz.py` |
+| [todo_app.py](example/todo_app.py) | A list of dicts that the browser edits (in place or by assignment) | `check_todo.py` |
 | [security_app.py](example/security_app.py) | What the guard and `v-safe-html` remove | `check_security.py` |
+| [errors_app.py](example/errors_app.py) | Broken on purpose: an error is shown in its component, the page keeps working | `check_errors.py` |
 
 Hot reload in development mode (starts its own server): `uv run python example/check_hot_reload.py`.
