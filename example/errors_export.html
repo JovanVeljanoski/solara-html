@@ -1,0 +1,9 @@
+<!-- Broken on purpose: the script imports a name that format.js does not export. -->
+<template>
+  <p class="export">never shown</p>
+</template>
+
+<script type="module">
+  import { nope } from "./format.js";
+  export const component = { data() { return { nope }; } };
+</script>

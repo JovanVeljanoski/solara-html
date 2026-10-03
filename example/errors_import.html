@@ -1,0 +1,9 @@
+<!-- Broken on purpose: the script imports a file with a syntax error. -->
+<template>
+  <p class="import">never shown</p>
+</template>
+
+<script type="module">
+  import { answer } from "./errors_lib.js";
+  export const component = { data() { return { answer }; } };
+</script>
