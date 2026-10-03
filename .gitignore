@@ -1,6 +1,29 @@
-.venv/
+# Local notes, not published
+HANDOVER.md
+
+# Python
 __pycache__/
-.pytest_cache/
-*.png
+*.py[cod]
+*.egg-info/
+build/
 dist/
-server-*.log
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Check output
+*.png
+*.log
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+.cursor/
+
+# Secrets
+.env
+.env.*

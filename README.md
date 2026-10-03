@@ -10,6 +10,57 @@ This repository continues that package. It is MIT licensed, like Solara.
 
 It needs Solara 1.64.0 or later, which has the `solara.server.reload.watch_file` hook that makes hot reload work.
 
+## Install
+
+Not on PyPI yet. Install from GitHub:
+
+```bash
+pip install git+https://github.com/JovanVeljanoski/solara-html.git
+```
+
+## Hello world
+
+Two files in the same folder.
+
+`hello.html`:
+
+```html
+<template>
+  <label>Name <input data-solara-model="name" /></label>
+  <p>Hello, <span data-solara-text="name"></span>!</p>
+</template>
+```
+
+`hello_app.py`:
+
+```python
+import solara
+
+import solara_html
+
+
+@solara_html.component_html("hello.html")
+def Hello(name="World", on_name=None):
+    pass
+
+
+name = solara.reactive("World")
+
+
+@solara.component
+def Page():
+    Hello(name=name.value, on_name=name.set)
+    solara.Text(f"Python sees: {name.value}")
+```
+
+Run it:
+
+```bash
+solara run hello_app.py
+```
+
+Type in the input: the greeting changes in the browser, and Python gets the new value through `on_name`.
+
 ## API
 
 ```python
@@ -101,7 +152,7 @@ The browser receives each component's code once per page, not once per instance.
 - React loads on the page next to Vue.
 - Page-wide CSS resets (such as Vuetify's `* { padding: 0 }`) beat `:host` rules, so put spacing on an element inside the template.
 
-## Run the example
+## Development and examples
 
 ```bash
 uv venv --python 3.11

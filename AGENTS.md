@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI coding agents working in this repository. Read [HANDOVER.md](HANDOVER.md) first for the current state and open tasks.
+Guidance for AI coding agents working in this repository.
 
 ## What this is
 
