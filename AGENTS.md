@@ -12,6 +12,7 @@ that exports a Vue options object named `component`. Vue 3 is the only engine. I
 
 - **Never edit Solara or ipyreact.** If something needs a change there, work around it in this package, or write down the request for the maintainers (widgetti/solara). Do not vendor or monkey-patch Solara internals.
 - Use only public Solara API. The one core hook we rely on is `solara.server.reload.watch_file`.
+- User JavaScript is never an ipyreact module: ipyreact stops every widget on the page if one module fails. Python sends the script and its imports as text and `runtime.js` loads them, so an error stays in its component. Keep it that way.
 - No frontend build step. `solara_html/runtime.js` is plain ES module JavaScript, shipped as is. Vue is a vendored copy of the official browser build (`solara_html/vendor`, see its README for how to update it).
 - Python talks to the template like Solara talks to widgets: props are assigned, events are called as methods. Do not add `$emit` to Python.
 - Security matters in the runtime: keep the DOM guard (`on*`, `srcdoc`, URL schemes), the `v-safe-html` sanitizer and its allowlists, and the refusal of `v-html` and `innerHTML` bindings in `component.py`. A change there needs a test in `example/check_security.py` or `tests/` and a README entry.
@@ -21,7 +22,7 @@ that exports a Vue options object named `component`. Vue 3 is the only engine. I
 
 - `solara_html/component.py` - the `component_html` decorator, builds an ipyreact widget class from the function signature.
 - `solara_html/parse.py` - splits the `.html` file into template, style and script (stdlib `html.parser`).
-- `solara_html/imports.py` - rewrites relative `import` statements in the script so each imported file becomes its own ES module, and inlines relative CSS `@import`s.
+- `solara_html/imports.py` - collects the script and the files it imports (relative `import`s rewritten to module ids) as data for the runtime, and inlines relative CSS `@import`s.
 - `solara_html/runtime.js` - the browser runtime: shadow root, the Vue app (props as reactive state, events as methods), the DOM guard, `v-safe-html`.
 - `solara_html/vendor/` - the Vue 3 browser build with the template compiler, and its license.
 - `docs/authoring.md` - the guide for writing components (for people and agents that use the package). Keep it in step with the README.

@@ -118,7 +118,8 @@ Use a local `data()` field for the draft, and assign the prop only on `@change`,
 
 | You see | Cause |
 | --- | --- |
-| The whole page is empty, and the browser console shows `SyntaxError` | A JavaScript syntax error in a component's `<script>` or in a file it imports. The console message has no file name: check the file you changed last. |
+| A red message `some.js: SyntaxError: ...` (or `page.html (script): ...`) | A JavaScript error in that file: a syntax error, an import of a name the file does not export, or an error thrown while it runs. The message names the file. There is no line number for a syntax error, so open that file. |
+| The template shows but the script seems not to run, and the console has `does not export "component"` | The script needs `export const component = {...}`. |
 | A red message in place of the component | A template or script error. The message says what failed. The browser console has the stack. |
 | `ValueError` when Python starts | The decorator refused something: a name clash, `v-html`, a missing `<template>`, a missing imported file, an import cycle. The message names the file. |
 | A prop does not update in the browser | Python did not assign a new value. In Solara, `items.value.append(x)` does not notify; use `items.set([...items.value, x])`. |

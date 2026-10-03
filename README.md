@@ -156,7 +156,8 @@ import { characters } from "./format.js";
 import TopicPicker from "./topic_picker.js";
 ```
 
-Each imported file becomes its own ES module, and its own relative imports work the same way.
+Each imported file becomes its own ES module (loaded once per page, and shared by the components that import it), and its own relative imports work the same way.
+A bare import such as `import * as React from "react"` works as it does in any ipyreact module.
 These forms are rewritten: `import x from "./a.js"`, `import "./a.js"`, and `export ... from "./a.js"`.
 A dynamic `import("./a.js")` is not rewritten, so it does not work.
 Imports inside comments and strings are left as they are.
@@ -190,12 +191,12 @@ It runs on [ipyreact](https://github.com/widgetti/ipyreact) ES modules, which So
 
 1. At import, the package defines two shared ES modules with `ipyreact.define_module`: Vue 3 (a copy of the full browser build, see [solara_html/vendor](solara_html/vendor/README.md)) and `solara-html` ([runtime.js](solara_html/runtime.js)).
    Vue runs from its own ES module, so it does not touch the Vue on the Solara page, whether that is Vue 2 or 3.
-2. The decorator turns each `.html` file into its own ES module: the file's script, plus an export that passes the template, CSS and the prop and event names to the runtime.
-   Each relatively imported file becomes an ES module too, defined before the module that imports it.
-   A module is named by a hash of its code, so an edit shows up live after a hot reload.
-   Each edit defines a new module; old ones stay until the server restarts (only in development mode, where files change).
+2. The decorator turns each `.html` file into its own small ES module that holds data only: the template, the CSS, the prop and event names, and the text of the script and of every file it imports.
+   The module is named by a hash of its code, so an edit shows up live after a hot reload. Each edit defines a new data module; old ones stay until the server restarts (only in development mode, where files change).
 3. Each component instance is an `ipyreact.Widget` that names that module.
    ipyreact waits until the module is loaded before it renders, and passes the traits, setters, events, and children to it as React props.
+   The runtime loads the script itself, as blob modules (through the same loader as ipyreact, so bare imports resolve), and mounts the Vue app when it is ready.
+   Your JavaScript is never part of an ipyreact module, so a mistake in it cannot stop the other components.
 4. The runtime renders a `div`, attaches a shadow root with the CSS, and mounts a Vue app there.
    The props are reactive state, with a getter and a setter each. The events are methods. Children stay in the light DOM, so the browser shows them at the `<slot>`.
    If the template or the script fails, the shadow root shows the error.
@@ -205,7 +206,8 @@ The browser receives each component's code once per page, not once per instance.
 ## Errors
 
 - A mistake in the template or in a method shows as a red message in the component, and the page keeps working. The browser console has the stack.
-- A JavaScript **syntax** error in a component's `<script>` (or in a file it imports) stops the whole page from rendering, because the browser cannot load the module. The console shows `SyntaxError` without a file name. Check the file you changed last.
+- A JavaScript error in a component's `<script>` or in a file it imports (a syntax error, a missing export, an error thrown while the file runs) shows in that component as `file name: error`, and the other components keep working. The browser reports no line number for a syntax error, so open the named file.
+- A script that does not export `component` logs a `solara-html:` warning in the console. The template still shows.
 - A mistake that Python can see raises a `ValueError` when the app starts, and the message names the file.
 
 ## Limits
@@ -241,6 +243,6 @@ then in a second shell `uv run python example/<check>.py --url http://localhost:
 | [quiz_app.py](example/quiz_app.py) | A child component (`topic_picker.js`), events with data, keyboard shortcuts, timers, a `<dialog>` | `check_quiz.py` |
 | [todo_app.py](example/todo_app.py) | A list of dicts that the browser edits (in place or by assignment) | `check_todo.py` |
 | [security_app.py](example/security_app.py) | What the guard and `v-safe-html` remove | `check_security.py` |
-| [errors_app.py](example/errors_app.py) | Broken on purpose: an error is shown in its component, the page keeps working | `check_errors.py` |
+| [errors_app.py](example/errors_app.py) | Broken on purpose (template, syntax error, bad import, missing export, throw): each error shows in its own component and names the file, the page keeps working | `check_errors.py` |
 
 Hot reload in development mode (starts its own server): `uv run python example/check_hot_reload.py`.
