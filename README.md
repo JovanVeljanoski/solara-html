@@ -8,10 +8,7 @@ It started as [widgetti/solara#1207](https://github.com/widgetti/solara/pull/120
 into a package by Maarten Breddels in [widgetti/solara#1233](https://github.com/widgetti/solara/pull/1233).
 This repository continues that package. It is MIT licensed, like Solara.
 
-It needs Solara 1.63.1 or later.
-Hot reload of the HTML file in development mode needs `solara.server.reload.watch_file`, which is not in a Solara release yet
-([widgetti/solara#1232](https://github.com/widgetti/solara/pull/1232)). Without it, restart the server after you edit an HTML file.
-Production mode is not affected.
+It needs Solara 1.64.0 or later, which has the `solara.server.reload.watch_file` hook that makes hot reload work.
 
 ## API
 
@@ -78,11 +75,9 @@ A missing file or an import cycle raises a `ValueError`.
 
 ## Hot reload
 
-With a Solara release that has `solara.server.reload.watch_file` (not released yet, see the top), in development mode
-(`solara run` without `--production`) a change to the HTML file or to a file it imports reloads the app, like a change to a Python file.
+In development mode (`solara run` without `--production`), a change to the HTML file or to a file it imports reloads the app, like a change to a Python file.
 The reload runs the decorator again only when the component is defined in a file under the app's directory.
-
-With Solara 1.63.1, `watch_file` is replaced by a no-op (see `solara_html/_compat.py`): restart the server after editing an HTML file.
+`example/check_hot_reload.py` tests this in a browser.
 
 ## How it works
 
@@ -121,4 +116,7 @@ uv run python example/check.py --url http://localhost:8765   # in a second shell
 # Beacon Lab (two instances, debounced input, Vue widgets in the slot)
 uv run solara run example/beacon_app.py --port 8765
 uv run python example/check_beacon.py --url http://localhost:8765   # in a second shell
+
+# Hot reload in development mode (starts its own server)
+uv run python example/check_hot_reload.py
 ```

@@ -1,0 +1,47 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+        solara: ["", "==1.64.0"] # latest, and the oldest supported release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          pip install -e ".[dev]"
+          if [ -n "${{ matrix.solara }}" ]; then pip install "solara-ui${{ matrix.solara }}" "solara-server${{ matrix.solara }}"; fi
+      - run: python -c "import solara; print(solara.__version__)"
+      - run: pytest
+
+  browser:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        solara: ["", "==1.64.0"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install -e ".[dev]"
+          if [ -n "${{ matrix.solara }}" ]; then pip install "solara-ui${{ matrix.solara }}" "solara-server${{ matrix.solara }}"; fi
+          playwright install --with-deps chromium
+      - run: scripts/run_browser_checks.sh
+      - name: Server logs
+        if: failure()
+        run: tail -n 100 server-*.log || true

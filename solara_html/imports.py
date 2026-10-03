@@ -16,7 +16,7 @@ from typing import Callable
 
 import ipyreact
 
-from solara_html._compat import watch_file
+from solara.server.reload import watch_file
 
 _RELATIVE_IMPORT = re.compile(
     r"""
