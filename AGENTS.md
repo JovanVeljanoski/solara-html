@@ -5,25 +5,27 @@ Guidance for AI coding agents working in this repository.
 ## What this is
 
 `solara-html` is a small standalone package that adds single-file HTML components to [Solara](https://github.com/widgetti/solara):
-`@solara_html.component_html("file.html")`. One `.html` file holds a `<template>`, optional scoped `<style>` and an optional `<script type="module">`.
-It runs on stock Solara (>= 1.64.0) through ipyreact ES modules. It is not a fork of Solara.
+`@solara_html.component_html("file.html")`. One `.html` file holds a Vue 3 `<template>`, optional scoped `<style>` and an optional `<script type="module">`
+that exports a Vue options object named `component`. Vue 3 is the only engine. It runs on stock Solara (>= 1.64.0) through ipyreact ES modules. It is not a fork of Solara.
 
 ## Ground rules
 
 - **Never edit Solara or ipyreact.** If something needs a change there, work around it in this package, or write down the request for the maintainers (widgetti/solara). Do not vendor or monkey-patch Solara internals.
 - Use only public Solara API. The one core hook we rely on is `solara.server.reload.watch_file`.
-- No frontend build step. `solara_html/runtime.js` is plain ES module JavaScript, shipped as is.
-- Security matters in the runtime: keep the attribute and property allowlists, the URL scheme checks, and the refusal of `on*` and `srcdoc` bindings. A new binding needs a test and a README entry.
+- No frontend build step. `solara_html/runtime.js` is plain ES module JavaScript, shipped as is. Vue is a vendored copy of the official browser build (`solara_html/vendor`, see its README for how to update it).
+- Python talks to the template like Solara talks to widgets: props are assigned, events are called as methods. Do not add `$emit` to Python.
+- Security matters in the runtime: keep the DOM guard (`on*`, `srcdoc`, URL schemes), the `v-safe-html` sanitizer and its allowlists, and the refusal of `v-html` and `innerHTML` bindings in `component.py`. A change there needs a test in `example/check_security.py` or `tests/` and a README entry.
 - The license is MIT. Keep the credit to Maarten A. Breddels (the package started from widgetti/solara#1233) in `LICENSE` and the README.
 
 ## Layout
 
 - `solara_html/component.py` - the `component_html` decorator, builds an ipyreact widget class from the function signature.
 - `solara_html/parse.py` - splits the `.html` file into template, style and script (stdlib `html.parser`).
-- `solara_html/imports.py` - rewrites relative `import` statements in the script so each imported file becomes its own ES module.
-- `solara_html/runtime.js` - the browser runtime: shadow root, `data-solara-*` bindings, `mount({root, get, set, subscribe, emit})`.
+- `solara_html/imports.py` - rewrites relative `import` statements in the script so each imported file becomes its own ES module, and inlines relative CSS `@import`s.
+- `solara_html/runtime.js` - the browser runtime: shadow root, the Vue app (props as reactive state, events as methods), the DOM guard, `v-safe-html`.
+- `solara_html/vendor/` - the Vue 3 browser build with the template compiler, and its license.
 - `tests/` - unit tests (no browser).
-- `example/` - example apps, each with a Playwright check (`check*.py`).
+- `example/` - example apps, each with a Playwright check (`check*.py`). Add a check for each new feature.
 - `scripts/run_browser_checks.sh` - runs all browser checks; CI uses it.
 
 ## Commands
