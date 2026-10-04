@@ -1,4 +1,4 @@
-"""Browser check for the errors example: run `solara run example/errors_app.py`, then this script.
+"""Browser check for the errors example: run `solara run example/errors/errors_app.py`, then this script.
 
 Every broken component shows its own message and names the file. The components next to them keep working.
 """

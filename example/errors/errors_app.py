@@ -1,7 +1,7 @@
 """Broken on purpose: an error in one component is shown in that component, and the page keeps working.
 
 Run from the repository root:
-    uv run solara run example/errors_app.py --no-open
+    uv run solara run example/errors/errors_app.py --no-open
 """
 
 import solara
@@ -49,7 +49,7 @@ def UsesReact():
     pass
 
 
-@solara_html.component_html("greeting.html")
+@solara_html.component_html("../greeting.html")
 def Fine(name: str = "World", is_default: bool = True, on_name=None, event_reset=None, children=[]):
     pass
 

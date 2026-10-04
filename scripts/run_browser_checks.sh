@@ -16,13 +16,14 @@ MODE_FLAGS=""
 
 # check_with_server <app.py> <check script>
 check_with_server() {
-  solara run "example/$1" $MODE_FLAGS --port "$PORT" --no-open >"server-$1.log" 2>&1 &
+  local name="${1//\//-}"
+  solara run "example/$1" $MODE_FLAGS --port "$PORT" --no-open >"server-$name.log" 2>&1 &
   SERVER_PID=$!
   for _ in $(seq 1 60); do
     if curl -sf "http://localhost:$PORT" >/dev/null; then break; fi
     sleep 1
   done
-  python "example/$2" --url "http://localhost:$PORT" --screenshot "/tmp/solara-html-$2.png"
+  python "example/$2" --url "http://localhost:$PORT" --screenshot "/tmp/solara-html-${2//\//-}.png"
   cleanup
   SERVER_PID=""
 }
@@ -35,7 +36,7 @@ run_all() {
   check_with_server quiz_app.py check_quiz.py
   check_with_server security_app.py check_security.py
   check_with_server todo_app.py check_todo.py
-  check_with_server errors_app.py check_errors.py
+  check_with_server errors/errors_app.py errors/check_errors.py
 }
 
 MODE_FLAGS="--production"
