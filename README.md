@@ -9,11 +9,12 @@ It started as [widgetti/solara#1207](https://github.com/widgetti/solara/pull/120
 into a package by Maarten Breddels in [widgetti/solara#1233](https://github.com/widgetti/solara/pull/1233).
 This repository continues that package. It is MIT licensed, like Solara.
 
-It needs Solara 1.64.0 or later, which has the `solara.server.reload.watch_file` hook that makes hot reload work.
+It needs Python 3.9 or later and Solara 1.64.0 or later (which has the `solara.server.reload.watch_file` hook that makes hot reload work).
+It also reads `solara.server.settings.main.mode`: in development mode it loads the Vue build that warns about template mistakes (see Errors).
 
 ## Install
 
-Not on PyPI yet. Install from GitHub:
+Install from GitHub:
 
 ```bash
 pip install git+https://github.com/JovanVeljanoski/solara-html.git
@@ -183,9 +184,10 @@ Treat the template as code you wrote, and values from Python or users as untrust
   This is a safety net for mistakes, not a wall: a dynamic form such as `v-bind="{ innerHTML: x }"` is not detected. The template is code you wrote, so review it like code.
 - `v-safe-html="text"` is the safe replacement. It parses the text without running anything, keeps a short list of tags and attributes (text formatting, lists, tables, links, images),
   drops scripts, frames, forms and event handlers, checks URLs, and adds `rel="noopener noreferrer"` to links.
-- A guard watches the component's DOM and removes `on*` attributes, `srcdoc`, and URLs in `href`, `src`, `action`, `formaction`, `poster`, `data` and `xlink:href`
+- A guard watches the component's DOM and removes every attribute whose name starts with `on` (so a harmless custom attribute such as `only` goes too), `srcdoc`, and URLs in `href`, `src`, `action`, `formaction`, `poster`, `data` and `xlink:href`
   that are not relative or `http`, `https`, `mailto` or `tel`. It reports each removal as a warning in the browser console.
   It covers every way to set them (`:href`, `v-bind="object"`, a dynamic attribute name). Only these attributes are checked, so do not bind an untrusted value to another attribute that takes a URL or code, such as the SVG `<animate to>`.
+- Do not bind untrusted data to `<component :is>` (or to a dynamic tag name in any other way): the guard checks attributes, not tag names.
 - The Vue template compiler needs `unsafe-eval` in the page's Content-Security-Policy. A page with a strict CSP (no `unsafe-eval`) cannot run these components.
 
 [example/security_app.py](example/security_app.py) shows unsafe markup on purpose, and `example/check_security.py` proves it is neutralised.
@@ -232,7 +234,7 @@ Props and event data travel as JSON, through the widget channel.
 
 ## Limits
 
-- It runs in the Solara server. It is not tested in Jupyter.
+- It targets the Solara server. Jupyter is not a goal.
 - It needs a browser from 2022 or later: Chrome and Edge 98, Firefox 101, Safari 16.4 (constructable stylesheets, `structuredClone`).
 - The template is compiled in the browser, which needs `unsafe-eval` in the CSP (see Security). The Vue build is about 63 KB gzipped.
 - Only the default `<slot>` exists. Named slots are not possible, because the children are widgets.
@@ -248,6 +250,7 @@ uv venv --python 3.11
 uv pip install -e ".[dev]"
 uv run playwright install chromium   # only for the browser checks
 uv run pytest                        # unit tests
+uv run ruff check . && uv run mypy   # lint and types (CI runs both)
 
 # All browser checks (starts its own servers; needs `python` and `solara` on PATH)
 source .venv/bin/activate && scripts/run_browser_checks.sh
@@ -265,6 +268,6 @@ then in a second shell `uv run python example/<check>.py --url http://localhost:
 | [todo_app.py](example/todo_app.py) | A list of dicts that the browser edits (in place or by assignment) | `check_todo.py` |
 | [security_app.py](example/security_app.py) | What the guard and `v-safe-html` remove | `check_security.py` |
 | [greeting_app.py](example/greeting_app.py) again | Several browsers on one server, and a reload | `check_sessions.py` |
-| [errors_app.py](example/errors_app.py) | Broken on purpose (template, syntax error, bad import, missing export, throw): each error shows in its own component and names the file, the page keeps working | `check_errors.py` |
+| [errors/errors_app.py](example/errors/errors_app.py) | Broken on purpose (template, syntax error, bad import, missing export, throw): each error shows in its own component and names the file, the page keeps working | `errors/check_errors.py` |
 
 Hot reload in development mode (starts its own server): `uv run python example/check_hot_reload.py`.

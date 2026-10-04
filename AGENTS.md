@@ -11,7 +11,7 @@ that exports a Vue options object named `component`. Vue 3 is the only engine. I
 ## Ground rules
 
 - **Never edit Solara or ipyreact.** If something needs a change there, work around it in this package, or write down the request for the maintainers (widgetti/solara). Do not vendor or monkey-patch Solara internals.
-- Use only public Solara API. The one core hook we rely on is `solara.server.reload.watch_file`.
+- Use only public Solara API. Two core hooks are used: `solara.server.reload.watch_file` (hot reload) and `solara.server.settings.main.mode` (development mode loads the Vue build that warns). Do not add a third without a reason.
 - User JavaScript is never an ipyreact module: ipyreact stops every widget on the page if one module fails. Python sends the script and its imports as text and `runtime.js` loads them, so an error stays in its component. Keep it that way.
 - No frontend build step. `solara_html/runtime.js` is plain ES module JavaScript, shipped as is. Vue is a vendored copy of the official browser build (`solara_html/vendor`, see its README for how to update it).
 - Python talks to the template like Solara talks to widgets: props are assigned, events are called as methods. Do not add `$emit` to Python.
@@ -27,7 +27,7 @@ that exports a Vue options object named `component`. Vue 3 is the only engine. I
 - `solara_html/vendor/` - the Vue 3 browser builds with the template compiler (production, and development with warnings; chosen by the Solara mode), and the license.
 - `docs/authoring.md` - the guide for writing components (for people and agents that use the package). Keep it in step with the README. The wheel includes it as `solara_html/authoring.md`.
 - `tests/` - unit tests (no browser).
-- `example/` - example apps, each with a Playwright check (`check*.py`). Add a check for each new feature.
+- `example/` - example apps, each with a Playwright check (`check*.py`). Add a check for each new feature. `example/errors/` holds the apps that are broken on purpose, with their check.
 - `scripts/run_browser_checks.sh` - runs all browser checks; CI uses it.
 
 ## Commands
@@ -37,17 +37,18 @@ uv venv --python 3.11 && uv pip install -e ".[dev]"
 uv run playwright install chromium      # once, for the browser checks
 
 uv run pytest                           # unit tests
+uv run ruff check . && uv run mypy      # lint and types; CI runs both
 source .venv/bin/activate && scripts/run_browser_checks.sh   # all browser checks (the script needs `python` and `solara` on PATH)
-uv run solara run example/greeting_app.py    # try the examples by hand
+uv run solara run example/greeting_app.py    # try the examples by hand (development mode; add --production for the other Vue build)
 ```
 
-Run both the unit tests and the browser checks before you call a change done. A change to `runtime.js` is only covered by the browser checks.
+Run the unit tests, ruff, mypy and the browser checks before you call a change done. A change to `runtime.js` is only covered by the browser checks.
 Do not claim something works in a browser unless you ran the check.
 
 ## Conventions
 
 - Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `ci:`, `refactor:`.
 - Default branch is `master`. Prefer small commits; squash fixups before pushing.
-- Type hints on Python code. Keep `from __future__ import annotations`; the package supports Python >= 3.8.
+- Type hints on Python code. Keep `from __future__ import annotations`; the package supports Python >= 3.9 (the oldest version in the CI matrix).
 - Comments say why, not what. Keep the README the source of truth for the user-facing API and its limits; update it with the code.
 - Do not commit screenshots (`*.png`), logs, or `.venv/`.
