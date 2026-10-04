@@ -268,6 +268,7 @@ then in a second shell `uv run python example/<check>.py --url http://localhost:
 | [todo_app.py](example/todo_app.py) | A list of dicts that the browser edits (in place or by assignment) | `check_todo.py` |
 | [security_app.py](example/security_app.py) | What the guard and `v-safe-html` remove | `check_security.py` |
 | [greeting_app.py](example/greeting_app.py) again | Several browsers on one server, and a reload | `check_sessions.py` |
-| [errors/errors_app.py](example/errors/errors_app.py) | Broken on purpose (template, syntax error, bad import, missing export, throw): each error shows in its own component and names the file, the page keeps working | `errors/check_errors.py` |
 
 Hot reload in development mode (starts its own server): `uv run python example/check_hot_reload.py`.
+
+[tests/browser/errors_app.py](tests/browser/errors_app.py) is not an example. It is broken on purpose (template, syntax error, bad import, missing export, throw): each error must show in its own component and name the file, and the page must keep working. `tests/browser/check_errors.py` checks it.

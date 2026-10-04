@@ -1,4 +1,4 @@
-"""Browser check for the errors example: run `solara run example/errors/errors_app.py`, then this script.
+"""Browser check for the errors app: run `solara run tests/browser/errors_app.py`, then this script.
 
 Every broken component shows its own message and names the file. The components next to them keep working.
 """
@@ -35,7 +35,7 @@ def main(url: str = "http://localhost:8765", screenshot: str = "solara-html-erro
         expect(message("errors_syntax.html (script)")).to_contain_text("SyntaxError")
         expect(message("errors_lib.js")).to_contain_text("SyntaxError")
         expect(message("errors_export.html (script)")).to_contain_text("does not provide an export named 'nope'")
-        expect(message("errors_export.html (script)")).to_contain_text("format.js")  # not a blob: URL
+        expect(message("errors_export.html (script)")).to_contain_text("errors_ok.js")  # not a blob: URL
         expect(message("errors_throw.html (script)")).to_contain_text("boom")
         # A broken component shows no template.
         for name in ("syntax", "import", "export", "throw"):

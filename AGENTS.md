@@ -26,8 +26,8 @@ that exports a Vue options object named `component`. Vue 3 is the only engine. I
 - `solara_html/runtime.js` - the browser runtime: shadow root, the Vue app (props as reactive state, events as methods), the DOM guard, `v-safe-html`.
 - `solara_html/vendor/` - the Vue 3 browser builds with the template compiler (production, and development with warnings; chosen by the Solara mode), and the license.
 - `docs/authoring.md` - the guide for writing components (for people and agents that use the package). Keep it in step with the README. The wheel includes it as `solara_html/authoring.md`.
-- `tests/` - unit tests (no browser).
-- `example/` - example apps, each with a Playwright check (`check*.py`). Add a check for each new feature. `example/errors/` holds the apps that are broken on purpose, with their check.
+- `tests/` - unit tests (no browser). `tests/browser/` holds the app that is broken on purpose (one component per kind of error) and its Playwright check; it is not an example.
+- `example/` - example apps, each with a Playwright check (`check*.py`). Add a check for each new feature.
 - `scripts/run_browser_checks.sh` - runs all browser checks; CI uses it.
 
 ## Commands
