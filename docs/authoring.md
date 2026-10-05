@@ -74,6 +74,7 @@ Do:
 Do not:
 
 - Do not use `v-html` or bind `innerHTML`. Use `v-safe-html="text"` for markup that comes from Python or users.
+- Never bind data from Python or users to `<component :is>`: a tag name such as `script` would run. Use a fixed name or a registered child component.
 - Do not use `onclick="..."` or other `on*` attributes, `srcdoc`, `javascript:` or `data:` URLs. They are removed. Use `@click`.
 - Do not use named slots, `<script setup>` or `setup()`. The first two cannot work, and `setup()` is not tested.
 - Do not give a `computed` or `methods` entry the same name as a prop or event. The component then shows an error.
@@ -155,7 +156,7 @@ In development mode (`solara run app.py`) a change to the HTML file, to a JavaSc
 
 1. The signature has a default and a type hint for every prop.
 2. Every `$emit` is between two Vue components, never to Python.
-3. No `v-html`, no `on*` attributes.
+3. No `v-html`, no `on*` attributes, no data from Python or users in `<component :is>`.
 4. Timers and `document` listeners are removed in `beforeUnmount`.
 5. You ran the app and used every control once. Read the browser console: there must be no `solara-html:` warning or error.
 6. For a change to this package: add or extend a check in `example/` and run `scripts/run_browser_checks.sh`.

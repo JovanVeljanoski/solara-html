@@ -1,5 +1,7 @@
 # solara-html
 
+> **Highly experimental.** This project can change in ways that break your code, at any time and without notice. Do not depend on it for anything you cannot rewrite.
+
 Single-file HTML components for Solara, as a separate package.
 One `.html` file holds a component's template, scoped CSS and browser JavaScript, and Solara connects it to Python state.
 The template is [Vue 3](https://vuejs.org/) template syntax, so a page is plain HTML with `{{ }}`, `v-model`, `v-if`, `v-for` and `@click`.
@@ -187,7 +189,8 @@ Treat the template as code you wrote, and values from Python or users as untrust
 - A guard watches the component's DOM and removes every attribute whose name starts with `on` (so a harmless custom attribute such as `only` goes too), `srcdoc`, and URLs in `href`, `src`, `action`, `formaction`, `poster`, `data` and `xlink:href`
   that are not relative or `http`, `https`, `mailto` or `tel`. It reports each removal as a warning in the browser console.
   It covers every way to set them (`:href`, `v-bind="object"`, a dynamic attribute name). Only these attributes are checked, so do not bind an untrusted value to another attribute that takes a URL or code, such as the SVG `<animate to>`.
-- Do not bind untrusted data to `<component :is>` (or to a dynamic tag name in any other way): the guard checks attributes, not tag names.
+- Never bind untrusted data to `<component :is>`, or choose a tag name from data in any other way. The guard checks attributes, not tag names, and a `<script>` element runs when it is inserted.
+  A test showed that `<component :is="tag">` with `tag = "script"` runs the script. `:is` with a fixed name or a registered child component is safe. The decorator does not detect this.
 - The Vue template compiler needs `unsafe-eval` in the page's Content-Security-Policy. A page with a strict CSP (no `unsafe-eval`) cannot run these components.
 
 [example/security_app.py](example/security_app.py) shows unsafe markup on purpose, and `example/check_security.py` proves it is neutralised.
