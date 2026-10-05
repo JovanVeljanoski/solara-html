@@ -22,4 +22,4 @@ def Page():
             event_reset=lambda _data: name.set("World"),
         ):
             solara.Button("Shout", on_click=lambda: name.set(name.value.upper()))
-        solara.Markdown(f"Python sees: **{name.value}**")
+        solara.Text(f"Python sees: {name.value}")
