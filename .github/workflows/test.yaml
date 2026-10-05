@@ -22,13 +22,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.12"]
         solara: ["", "==1.64.0"] # latest, and the oldest supported release
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
       - name: Install
         run: |
           pip install -e ".[dev]"

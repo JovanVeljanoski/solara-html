@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 import functools
 import inspect
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import ipyreact
 import traitlets
@@ -69,7 +68,7 @@ def component_html(path: str) -> Callable[[Callable[..., None]], Callable[..., A
             if "children" in values and values["children"] is None:
                 values["children"] = []  # ipyreact's children trait is a List
             # ipyreact passes each entry to React as a callable prop, named without the event_ prefix.
-            events = {name[len("event_") :]: values.pop(name) for name in list(values) if name.startswith("event_")}
+            events = {name.removeprefix("event_"): values.pop(name) for name in list(values) if name.startswith("event_")}
             # Reacton adds .element to widget classes at runtime
             return widget_class.element(_module=module, _type="Component", events=events, **values)  # type: ignore[attr-defined]
 
@@ -83,8 +82,8 @@ def _split_arguments(arguments: list[str]) -> tuple[list[str], list[str]]:
 
     `children` and `event_<name>` are not props. `on_<prop>` is a callback of that prop, when `<prop>` is an argument too.
     """
-    props = [n for n in arguments if n != "children" and not n.startswith("event_") and not (n.startswith("on_") and n[len("on_") :] in arguments)]
-    events = [n[len("event_") :] for n in arguments if n.startswith("event_")]
+    props = [n for n in arguments if n != "children" and not n.startswith("event_") and not (n.startswith("on_") and n.removeprefix("on_") in arguments)]
+    events = [n.removeprefix("event_") for n in arguments if n.startswith("event_")]
     return props, events
 
 
@@ -106,7 +105,7 @@ def _widget_from_signature(class_name: str, signature: inspect.Signature) -> typ
 
     for name in arguments:
         if name.startswith("event_"):
-            claim(name[len("event_") :], name)  # ipyreact already has events
+            claim(name.removeprefix("event_"), name)  # ipyreact already has events
         elif name in props:
             if name.startswith("_") or hasattr(ipyreact.Widget, name):
                 raise ValueError(f"{class_name}: argument {name!r} clashes with an ipyreact.Widget attribute")

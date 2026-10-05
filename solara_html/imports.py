@@ -10,14 +10,11 @@ An import-like string inside a nested template literal (`${`import "./x.js"`}` i
 rewritten, because a regular expression cannot track that nesting.
 """
 
-from __future__ import annotations
-
 import hashlib
-import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from solara.server.reload import watch_file
 
@@ -96,7 +93,7 @@ def _bundle(code: str, importer: Path, file: str, root: Path, modules: dict[Path
             if not path.is_file():
                 raise ValueError(f"{importer}: imported file {specifier!r} does not exist ({path})")
             watch_file(path)
-            _bundle(path.read_text(encoding="utf-8"), path, os.path.relpath(path, root), root, modules, stack + (path,))
+            _bundle(path.read_text(encoding="utf-8"), path, str(path.relative_to(root, walk_up=True)), root, modules, stack + (path,))
         name = modules[path].id
         if name not in imports:
             imports.append(name)

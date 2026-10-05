@@ -12,7 +12,7 @@ authors = [
     {name = "Maarten A. Breddels", email = "maartenbreddels@gmail.com"},
 ]
 license = {file = "LICENSE"}
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 classifiers = ["License :: OSI Approved :: MIT License"]
 dependencies = [
     "solara-ui>=1.64.0",
@@ -34,10 +34,10 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 160
-target-version = "py39"
+target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "UP"]
 
 [tool.mypy]
 files = ["solara_html"]

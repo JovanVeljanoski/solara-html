@@ -11,7 +11,7 @@ It started as [widgetti/solara#1207](https://github.com/widgetti/solara/pull/120
 into a package by Maarten Breddels in [widgetti/solara#1233](https://github.com/widgetti/solara/pull/1233).
 This repository continues that package. It is MIT licensed, like Solara.
 
-It needs Python 3.9 or later and Solara 1.64.0 or later (which has the `solara.server.reload.watch_file` hook that makes hot reload work).
+It needs Python 3.12 or later and Solara 1.64.0 or later (which has the `solara.server.reload.watch_file` hook that makes hot reload work).
 It also reads `solara.server.settings.main.mode`: in development mode it loads the Vue build that warns about template mistakes (see Errors).
 
 ## Install
@@ -249,7 +249,7 @@ Props and event data travel as JSON, through the widget channel.
 ## Development and examples
 
 ```bash
-uv venv --python 3.11
+uv venv --python 3.12
 uv pip install -e ".[dev]"
 uv run playwright install chromium   # only for the browser checks
 uv run pytest                        # unit tests

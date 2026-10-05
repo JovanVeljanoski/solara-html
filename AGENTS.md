@@ -33,7 +33,7 @@ that exports a Vue options object named `component`. Vue 3 is the only engine. I
 ## Commands
 
 ```bash
-uv venv --python 3.11 && uv pip install -e ".[dev]"
+uv venv --python 3.12 && uv pip install -e ".[dev]"
 uv run playwright install chromium      # once, for the browser checks
 
 uv run pytest                           # unit tests
@@ -49,6 +49,6 @@ Do not claim something works in a browser unless you ran the check.
 
 - Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `ci:`, `refactor:`.
 - Default branch is `master`. Prefer small commits; squash fixups before pushing.
-- Type hints on Python code. Keep `from __future__ import annotations`; the package supports Python >= 3.9 (the oldest version in the CI matrix).
+- Type hints on Python code, in the Python 3.12 style (`list[str]`, `str | None`). The package needs Python >= 3.12 and does not support older versions.
 - Comments say why, not what. Keep the README the source of truth for the user-facing API and its limits; update it with the code.
 - Do not commit screenshots (`*.png`), logs, or `.venv/`.
