@@ -57,8 +57,9 @@
 </nav>
 
 <h2 id="install">Install</h2>
-<pre><code>pip install git+https://github.com/JovanVeljanoski/solara-html.git</code></pre>
-<p>Not on PyPI. Requires Python <span data-sync="python">3.12</span> or later, Solara <span data-sync="solara">1.64.0</span> or later, and a browser from 2022 or later.</p>
+<pre><code>pip install solara
+pip install git+https://github.com/JovanVeljanoski/solara-html.git</code></pre>
+<p><code>pip install solara</code> gives you the <code>solara run</code> command. Not on PyPI. Requires Python <span data-sync="python">3.12</span> or later, Solara <span data-sync="solara">1.64.0</span> or later, and a browser from 2022 or later.</p>
 
 <h2 id="motivation">Motivation</h2>
 <ul>
@@ -76,10 +77,24 @@
 <p>Two files in one folder.</p>
 <p class="file">hello.html</p>
 <pre><code data-file="hello/hello.html">&lt;template&gt;
-  &lt;label&gt;Name &lt;input v-model="name" /&gt;&lt;/label&gt;
-  &lt;p&gt;Hello, {{ name }}!&lt;/p&gt;
-  &lt;button :disabled="name === 'World'" @click="reset()"&gt;Reset&lt;/button&gt;
-&lt;/template&gt;</code></pre>
+  &lt;div class="hello"&gt;
+    &lt;label&gt;Your name &lt;input v-model="name" /&gt;&lt;/label&gt;
+    &lt;h1&gt;Hello, &lt;span&gt;{{ name }}&lt;/span&gt;!&lt;/h1&gt;
+    &lt;button :disabled="name === 'World'" @click="reset()"&gt;Reset&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;style&gt;
+  .hello { max-width: 22rem; padding: 1.5rem; border-radius: 16px; color: white; font-family: system-ui, sans-serif;
+    background: linear-gradient(135deg, #7c3aed, #ec4899 60%, #f59e0b); box-shadow: 0 10px 30px rgb(124 58 237 / 35%); }
+  label { display: grid; gap: 0.3rem; font-size: 0.85rem; }
+  input { padding: 0.6rem 0.8rem; border: 0; border-radius: 10px; font: inherit; outline: none; }
+  input:focus { box-shadow: 0 0 0 3px rgb(255 255 255 / 60%); }
+  h1 { margin: 1rem 0; font-size: 2rem; }
+  h1 span { padding: 0 0.4rem; border-radius: 8px; background: rgb(255 255 255 / 22%); }
+  button { padding: 0.5rem 1.1rem; border: 0; border-radius: 999px; background: white; color: #7c3aed; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: 0.45; cursor: default; }
+&lt;/style&gt;</code></pre>
 <p class="file">app.py</p>
 <pre><code data-file="hello/app.py">import solara
 
@@ -101,7 +116,7 @@ def Page():
 <pre><code>solara run app.py</code></pre>
 <p>Typing in the input changes the greeting and calls <code>on_name</code>. The button calls <code>event_reset</code> in Python.</p>
 <figure>
-  <img src="img/hello.png" alt="A text field with Ada, the line Hello, Ada!, a Reset button, and the line Python sees: Ada" />
+  <img src="img/hello.png" alt="A purple to orange gradient card with a text field containing Ada, the heading Hello, Ada!, and a white Reset button, above the line Python sees: Ada" />
   <figcaption>After typing "Ada". The last line comes from Python.</figcaption>
 </figure>
 
@@ -151,22 +166,36 @@ def Page():
 <h2 id="examples">Examples</h2>
 
 <h3 id="example-list">A list the browser edits</h3>
-<p>A list prop changed by assignment or in place (<code>item.done</code>). Python gets both.</p>
+<p>A list prop changed by assignment (<code>add</code>) and in place (<code>item.done</code>). Python gets both. Classes bind to data (<code>:class</code>).</p>
 <p class="file">tasks.html</p>
 <pre><code data-file="tasks/tasks.html">&lt;template&gt;
-  &lt;form @submit.prevent="add"&gt;
-    &lt;input v-model="draft" placeholder="New task" /&gt;
-    &lt;button&gt;Add&lt;/button&gt;
-  &lt;/form&gt;
-  &lt;ul&gt;
-    &lt;li v-for="item in items"&gt;
-      &lt;label&gt;
-        &lt;input type="checkbox" v-model="item.done" /&gt;
-        {{ item.text }}
-      &lt;/label&gt;
-    &lt;/li&gt;
-  &lt;/ul&gt;
+  &lt;div class="tasks"&gt;
+    &lt;form @submit.prevent="add"&gt;
+      &lt;input v-model="draft" placeholder="New task" /&gt;
+      &lt;button&gt;Add&lt;/button&gt;
+    &lt;/form&gt;
+    &lt;ul&gt;
+      &lt;li v-for="item in items" :class="{ done: item.done }"&gt;
+        &lt;label&gt;
+          &lt;input type="checkbox" v-model="item.done" /&gt;
+          {{ item.text }}
+        &lt;/label&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/div&gt;
 &lt;/template&gt;
+
+&lt;style&gt;
+  .tasks { max-width: 22rem; padding: 1.25rem; border-radius: 16px; background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
+  form { display: flex; gap: 0.5rem; }
+  form input { flex: 1; padding: 0.55rem 0.8rem; border: 1px solid #334155; border-radius: 10px; background: #1e293b; color: inherit; font: inherit; }
+  form button { padding: 0.55rem 1rem; border: 0; border-radius: 10px; background: #14b8a6; color: #042f2e; font: inherit; font-weight: 700; cursor: pointer; }
+  ul { margin: 1rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.5rem; }
+  li { padding: 0.6rem 0.8rem; border-radius: 10px; background: #1e293b; border-left: 4px solid #f59e0b; }
+  li.done { border-left-color: #14b8a6; color: #64748b; text-decoration: line-through; }
+  label { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; }
+  li input { width: 1.1rem; height: 1.1rem; accent-color: #14b8a6; }
+&lt;/style&gt;
 
 &lt;script type="module"&gt;
   export const component = {
@@ -201,24 +230,29 @@ def Page():
     Tasks(items=items.value, on_items=items.set)
     solara.Text(f"Python sees: {items.value}")</code></pre>
 <figure>
-  <img src="img/tasks.png" alt="An input and an Add button, one ticked task Write docs, and the line Python sees with the list" />
-  <figcaption>After adding "Write docs" and ticking it. The last line comes from Python.</figcaption>
+  <img src="img/tasks.png" alt="A dark task list with an input and a teal Add button, a ticked task Write docs, an open task Ship it, and the line Python sees with the list" />
+  <figcaption>After adding "Write docs" and "Ship it", and ticking the first. The last line comes from Python.</figcaption>
 </figure>
 
-<h3 id="example-slot">Style, slot and an event with data</h3>
-<p>The children of the Python call appear at <code>&lt;slot&gt;</code>. The event passes a value to Python.</p>
+<h3 id="example-slot">Props in CSS, a slot and an event with data</h3>
+<p>The <code>color</code> prop becomes a CSS variable. The children of each Python call appear at <code>&lt;slot&gt;</code>. The event passes a value to Python.</p>
 <p class="file">card.html</p>
 <pre><code data-file="card/card.html">&lt;template&gt;
-  &lt;div class="card"&gt;
-    &lt;h2&gt;{{ title }}&lt;/h2&gt;
-    &lt;slot&gt;&lt;/slot&gt;
+  &lt;article class="card" :style="{ '--accent': color }"&gt;
+    &lt;header&gt;&lt;h2&gt;{{ title }}&lt;/h2&gt;&lt;/header&gt;
+    &lt;div class="body"&gt;&lt;slot&gt;&lt;/slot&gt;&lt;/div&gt;
     &lt;button @click="choose(title)"&gt;Choose&lt;/button&gt;
-  &lt;/div&gt;
+  &lt;/article&gt;
 &lt;/template&gt;
 
 &lt;style&gt;
-  .card { border: 1px solid #999; border-radius: 8px; padding: 1rem; }
-  h2 { margin-top: 0; }
+  .card { width: 13rem; overflow: hidden; border-radius: 14px; background: white; color: #1e293b; font-family: system-ui, sans-serif; box-shadow: 0 6px 20px rgb(0 0 0 / 18%); }
+  header { padding: 1rem 1.2rem; background: var(--accent); color: white; }
+  h2 { margin: 0; font-size: 1.2rem; }
+  .body { padding: 1rem 1.2rem; }
+  button { display: block; width: calc(100% - 2.4rem); margin: 0 1.2rem 1.2rem; padding: 0.6rem; border: 2px solid var(--accent); border-radius: 8px;
+    background: white; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+  button:hover { background: var(--accent); color: white; }
 &lt;/style&gt;</code></pre>
 <p class="file">app.py</p>
 <pre><code data-file="card/app.py">import solara
@@ -227,7 +261,7 @@ import solara_html
 
 
 @solara_html.component_html("card.html")
-def Card(title="", event_choose=None, children=None):
+def Card(title="", color="#0ea5e9", event_choose=None, children=None):
     pass
 
 
@@ -236,15 +270,34 @@ chosen = solara.reactive("")
 
 @solara.component
 def Page():
-    with Card(title="Plan A", event_choose=chosen.set):
-        solara.Text("These children are Solara widgets.")
+    with solara.Row(gap="1rem"):
+        with Card(title="Starter", color="#0ea5e9", event_choose=chosen.set):
+            solara.Text("For one app.")
+        with Card(title="Pro", color="#a855f7", event_choose=chosen.set):
+            solara.Text("For a team.")
     solara.Text(f"Chosen: {chosen.value}")</code></pre>
 <figure>
-  <img src="img/card.png" alt="A bordered card with the title Plan A, the text These children are Solara widgets, a Choose button, and the line Chosen: Plan A" />
-  <figcaption>After clicking Choose. The last line comes from Python.</figcaption>
+  <img src="img/card.png" alt="Two cards side by side: Starter with a blue header and Pro with a purple header, each with a text and a Choose button, and the line Chosen: Pro" />
+  <figcaption>After clicking Choose on Pro. The last line comes from Python.</figcaption>
 </figure>
 
-<p>More, each with a browser check: <a href="https://github.com/JovanVeljanoski/solara-html/tree/master/example">example/</a>. A guide for writing components, with rules and recipes: <a href="https://github.com/JovanVeljanoski/solara-html/blob/master/docs/authoring.md">docs/authoring.md</a>.</p>
+<h3 id="run-examples">Run the other examples</h3>
+<p>The repository has more apps, each with a browser check. They are in the repository, not in the installed package.</p>
+<pre><code>git clone https://github.com/JovanVeljanoski/solara-html.git
+cd solara-html
+pip install solara -e .
+solara run example/quiz_app.py</code></pre>
+<p>In development mode (the default of <code>solara run</code>), editing an <code>.html</code> file in <code>example/</code> reloads the page.</p>
+<table>
+  <tr><th>App</th><th>Shows</th></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/greeting_app.py">greeting_app.py</a></td><td><code>v-model</code>, a computed value, an event, a relative JS import, a slot</td></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/beacon_app.py">beacon_app.py</a></td><td>Two instances, a debounced input, watchers, lifecycle hooks, Solara widgets in the slot</td></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/settings_app.py">settings_app.py</a></td><td><code>select</code>, checkbox, number validation, <code>v-if</code> chains, a modal <code>&lt;dialog&gt;</code>, a slow server, a shared CSS <code>@import</code></td></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/quiz_app.py">quiz_app.py</a></td><td>A child component in its own <code>.js</code> file, events with data, keyboard shortcuts, timers</td></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/todo_app.py">todo_app.py</a></td><td>A list of dicts that the browser edits</td></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/security_app.py">security_app.py</a></td><td>What the guard and <code>v-safe-html</code> remove</td></tr>
+</table>
+<p>A guide for writing components, with rules and recipes: <a href="https://github.com/JovanVeljanoski/solara-html/blob/master/docs/authoring.md">docs/authoring.md</a>.</p>
 
 <h2 id="security">Security</h2>
 <ul>

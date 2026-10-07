@@ -60,19 +60,20 @@ def hello(page: Page) -> None:
 
 
 def tasks(page: Page) -> None:
-    page.get_by_placeholder("New task").fill("Write docs")
-    page.get_by_role("button", name="Add").click()
-    expect(page.get_by_role("listitem")).to_have_count(1)
-    expect(page.get_by_text("Python sees: [{'text': 'Write docs', 'done': False}]")).to_be_visible()
-    page.get_by_role("checkbox").check()
-    expect(page.get_by_text("Python sees: [{'text': 'Write docs', 'done': True}]")).to_be_visible()
+    for text in ("Write docs", "Ship it"):
+        page.get_by_placeholder("New task").fill(text)
+        page.get_by_role("button", name="Add").click()
+    expect(page.get_by_role("listitem")).to_have_count(2)
+    expect(page.get_by_text("Python sees: [{'text': 'Write docs', 'done': False}, {'text': 'Ship it', 'done': False}]")).to_be_visible()
+    page.get_by_role("checkbox").first.check()
+    expect(page.get_by_text("Python sees: [{'text': 'Write docs', 'done': True}, {'text': 'Ship it', 'done': False}]")).to_be_visible()
 
 
 def card(page: Page) -> None:
-    expect(page.get_by_role("heading", name="Plan A")).to_be_visible()
-    expect(page.get_by_text("These children are Solara widgets.")).to_be_visible()
-    page.get_by_role("button", name="Choose").click()
-    expect(page.get_by_text("Chosen: Plan A")).to_be_visible()
+    expect(page.get_by_role("heading", name="Starter")).to_be_visible()
+    expect(page.get_by_text("For a team.")).to_be_visible()
+    page.get_by_role("button", name="Choose").nth(1).click()
+    expect(page.get_by_text("Chosen: Pro")).to_be_visible()
 
 
 CHECKS: dict[str, Callable[[Page], None]] = {"hello": hello, "tasks": tasks, "card": card}

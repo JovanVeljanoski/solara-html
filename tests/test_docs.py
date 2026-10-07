@@ -126,6 +126,11 @@ def test_every_example_shows_its_result(page: _Page) -> None:
         assert page.images.get(f"img/{folder}.png"), f"no <img src=\"img/{folder}.png\" alt=...> for the example {folder}"
 
 
+def test_every_example_app_is_listed(page: _Page) -> None:
+    for app in sorted((ROOT / "example").glob("*_app.py")):
+        assert f"{REPOSITORY}/blob/master/example/{app.name}" in page.links, f"{app.name} is not listed on the page"
+
+
 def test_the_install_command_is_the_one_in_the_readme() -> None:
     command = f"pip install git+{REPOSITORY}.git"
     assert command in PAGE.read_text(encoding="utf-8")

@@ -16,9 +16,10 @@ It also reads `solara.server.settings.main.mode`: in development mode it loads t
 
 ## Install
 
-Install from GitHub:
+Install from GitHub. `pip install solara` gives you the `solara run` command:
 
 ```bash
+pip install solara
 pip install git+https://github.com/JovanVeljanoski/solara-html.git
 ```
 
