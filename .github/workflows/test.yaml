@@ -65,7 +65,7 @@ jobs:
         run: |
           uv pip install --system -e ".[dev]"
           if [ -n "${{ matrix.solara }}" ]; then uv pip install --system "solara-ui${{ matrix.solara }}" "solara-server${{ matrix.solara }}"; fi
-          playwright install --with-deps chromium
+          playwright install chromium  # no --with-deps: it runs apt-get, which is slow, and the runner already has the libraries
       - run: scripts/run_browser_checks.sh
       - name: Server logs
         if: failure()
