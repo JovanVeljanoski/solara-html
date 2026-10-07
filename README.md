@@ -274,6 +274,6 @@ then in a second shell `uv run python example/<check>.py --url http://localhost:
 
 Hot reload in development mode (starts its own server): `uv run python example/check_hot_reload.py`.
 
-The docs page is [docs/index.html](docs/index.html), plain HTML that GitHub Pages serves. Its code blocks (`data-file`) are run by `tests/test_docs.py` and `tests/browser/check_docs.py`, and its facts (versions, names, lists) are compared with the code. Edit the page and the code together; the tests fail when they differ.
+The docs page is [docs/index.html](docs/index.html), plain HTML that GitHub Pages serves. Its code blocks (`data-file`) are run by `tests/test_docs.py` and `tests/browser/check_docs.py`, and its facts (versions, names, lists) are compared with the code. The pictures of the results are made when the page is published (`python tests/browser/check_docs.py --screenshots docs/img`) and are not committed, so they are missing when you open the file locally. Edit the page and the code together; the tests fail when they differ.
 
 [tests/browser/errors_app.py](tests/browser/errors_app.py) is not an example. It is broken on purpose (template, syntax error, bad import, missing export, throw): each error must show in its own component and name the file, and the page must keep working. `tests/browser/check_errors.py` checks it.

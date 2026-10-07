@@ -27,6 +27,7 @@ class _Page(HTMLParser):
         self.files: dict[str, str] = {}  # code with a data-file attribute
         self.sync: dict[str, str] = {}  # text of an element with a data-sync attribute
         self.links: list[str] = []
+        self.images: dict[str, str] = {}  # src -> alt
         self.ids: list[str] = []
         self.tags_before_first_h2: list[str] = []
         self._collect: tuple[str, str, str] | None = None  # (kind, key, tag) of the element that is being read
@@ -43,6 +44,8 @@ class _Page(HTMLParser):
             self.ids.append(attributes["id"])
         if tag == "a" and attributes.get("href"):
             self.links.append(attributes["href"])
+        if tag == "img":
+            self.images[attributes.get("src") or ""] = attributes.get("alt") or ""
         if attributes.get("data-file"):
             self._collect, self._text = ("file", attributes["data-file"], tag), []
         elif attributes.get("data-sync"):
@@ -115,6 +118,12 @@ def test_the_examples_load(page: _Page, tmp_path: Path) -> None:
     for app in sorted(tmp_path.glob("*/app.py")):
         namespace = runpy.run_path(str(app))  # the decorator reads and checks the HTML file
         assert "Page" in namespace, app
+
+
+def test_every_example_shows_its_result(page: _Page) -> None:
+    # check_docs.py saves these pictures when the page is published; they are not in the repository.
+    for folder in {name.split("/")[0] for name in page.files}:
+        assert page.images.get(f"img/{folder}.png"), f"no <img src=\"img/{folder}.png\" alt=...> for the example {folder}"
 
 
 def test_the_install_command_is_the_one_in_the_readme() -> None:

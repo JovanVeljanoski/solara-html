@@ -2,6 +2,9 @@
 
 It writes every example of the page to a temporary folder, runs each as a Solara app (development mode, so Vue warns about
 template mistakes) and does what the page says the example does. Run it with `python tests/browser/check_docs.py`.
+
+With `--screenshots docs/img` it also saves the result of each example as `<example>.png`, for the docs page.
+The workflow that publishes the page does that, so the images are never committed.
 """
 
 import socket
@@ -51,6 +54,9 @@ def hello(page: Page) -> None:
     page.get_by_role("button", name="Reset").click()
     expect(page.get_by_text("Python sees: World")).to_be_visible()
     expect(page.get_by_text("Hello, World!")).to_be_visible()
+    # The picture on the page shows this state.
+    page.get_by_label("Name").fill("Ada")
+    expect(page.get_by_text("Python sees: Ada")).to_be_visible()
 
 
 def tasks(page: Page) -> None:
@@ -72,6 +78,12 @@ def card(page: Page) -> None:
 CHECKS: dict[str, Callable[[Page], None]] = {"hello": hello, "tasks": tasks, "card": card}
 
 
+def snapshot(page: Page, path: Path) -> None:
+    """A picture of what the example shows: the page content, without the empty page around it."""
+    page.add_style_tag(content=".solara-autorouter-content > .v-sheet { padding: 12px; }")
+    page.locator(".solara-autorouter-content > .v-sheet").screenshot(path=path)
+
+
 def free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -91,7 +103,7 @@ def wait_for_server(url: str, process: subprocess.Popen, timeout: float = 60) ->
     raise RuntimeError(f"{url} did not start in {timeout} seconds")
 
 
-def main() -> None:
+def main(screenshots: str = typer.Option("", help="A folder for the picture of each example")) -> None:
     examples = _Examples()
     examples.feed(PAGE.read_text(encoding="utf-8"))
     folders = {name.split("/")[0] for name in examples.files}
@@ -114,12 +126,15 @@ def main() -> None:
             problems: list[str] = []
             try:
                 wait_for_server(url, server)
-                page = browser.new_page()
+                page = browser.new_page(viewport={"width": 520, "height": 500}, device_scale_factor=2)
                 # Solara itself logs Vue warnings in development mode; only errors and our own warnings count.
                 page.on("console", lambda m: problems.append(m.text) if m.type == "error" or "solara-html" in m.text else None)
                 page.on("pageerror", lambda error: problems.append(str(error)))
                 page.goto(url)
                 check(page)
+                if screenshots:
+                    Path(screenshots).mkdir(parents=True, exist_ok=True)
+                    snapshot(page, Path(screenshots) / f"{folder}.png")
                 assert not problems, f"{folder}: browser console problems:\n" + "\n".join(problems)
                 page.close()
             finally:

@@ -30,6 +30,9 @@
   #alpha-warning p { margin: 0; }
   nav { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.95rem; margin: 0.75rem 0 0; }
   .lead { color: var(--muted); margin-top: 0; }
+  figure { margin: 0.75rem 0; }
+  figure img { display: block; max-width: 100%; height: auto; background: #fff; border: 1px solid var(--line); border-radius: 6px; }
+  figcaption { color: var(--muted); font-size: 0.88rem; margin-top: 0.3rem; }
 </style>
 </head>
 <body>
@@ -97,6 +100,10 @@ def Page():
     solara.Text(f"Python sees: {name.value}")</code></pre>
 <pre><code>solara run app.py</code></pre>
 <p>Typing in the input changes the greeting and calls <code>on_name</code>. The button calls <code>event_reset</code> in Python.</p>
+<figure>
+  <img src="img/hello.png" alt="A text field with Ada, the line Hello, Ada!, a Reset button, and the line Python sees: Ada" />
+  <figcaption>After typing "Ada". The last line comes from Python.</figcaption>
+</figure>
 
 <h2 id="api">API</h2>
 
@@ -153,7 +160,10 @@ def Page():
   &lt;/form&gt;
   &lt;ul&gt;
     &lt;li v-for="item in items"&gt;
-      &lt;label&gt;&lt;input type="checkbox" v-model="item.done" /&gt; {{ item.text }}&lt;/label&gt;
+      &lt;label&gt;
+        &lt;input type="checkbox" v-model="item.done" /&gt;
+        {{ item.text }}
+      &lt;/label&gt;
     &lt;/li&gt;
   &lt;/ul&gt;
 &lt;/template&gt;
@@ -190,6 +200,10 @@ items = solara.reactive([])
 def Page():
     Tasks(items=items.value, on_items=items.set)
     solara.Text(f"Python sees: {items.value}")</code></pre>
+<figure>
+  <img src="img/tasks.png" alt="An input and an Add button, one ticked task Write docs, and the line Python sees with the list" />
+  <figcaption>After adding "Write docs" and ticking it. The last line comes from Python.</figcaption>
+</figure>
 
 <h3 id="example-slot">Style, slot and an event with data</h3>
 <p>The children of the Python call appear at <code>&lt;slot&gt;</code>. The event passes a value to Python.</p>
@@ -225,6 +239,10 @@ def Page():
     with Card(title="Plan A", event_choose=chosen.set):
         solara.Text("These children are Solara widgets.")
     solara.Text(f"Chosen: {chosen.value}")</code></pre>
+<figure>
+  <img src="img/card.png" alt="A bordered card with the title Plan A, the text These children are Solara widgets, a Choose button, and the line Chosen: Plan A" />
+  <figcaption>After clicking Choose. The last line comes from Python.</figcaption>
+</figure>
 
 <p>More, each with a browser check: <a href="https://github.com/JovanVeljanoski/solara-html/tree/master/example">example/</a>. A guide for writing components, with rules and recipes: <a href="https://github.com/JovanVeljanoski/solara-html/blob/master/docs/authoring.md">docs/authoring.md</a>.</p>
 
