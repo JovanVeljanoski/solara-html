@@ -44,4 +44,5 @@ run_all
 MODE_FLAGS=""
 run_all
 python example/check_hot_reload.py
-python tests/browser/check_docs.py
+# The pictures of the docs page; CI publishes them (they are not committed).
+python tests/browser/check_docs.py --screenshots docs/img
