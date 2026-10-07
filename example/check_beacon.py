@@ -31,7 +31,7 @@ def main(url: str = "http://localhost:8765", screenshot: str = "solara-html-beac
         expect(python_sees.nth(0)).to_have_text("Python sees call sign: NOVA-1")
         expect(python_sees.nth(1)).to_have_text("Python sees call sign: EMBER-3")
 
-        # An event from the native button reaches Python, and the count comes back through data-solara-text.
+        # An event from the native button reaches Python, and the count comes back as a prop.
         first.locator(".pulse-button").click()
         first.locator(".pulse-button").click()
         expect(first.locator(".counter strong")).to_have_text("2")

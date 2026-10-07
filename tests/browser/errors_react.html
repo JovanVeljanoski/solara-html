@@ -1,0 +1,9 @@
+<!-- Works: a script can import "react" (and other bare names that ipyreact knows) like any ipyreact module. -->
+<template>
+  <p class="react">React {{ version }}</p>
+</template>
+
+<script type="module">
+  import * as React from "react";
+  export const component = { data() { return { version: React.version.split(".")[0] }; } };
+</script>

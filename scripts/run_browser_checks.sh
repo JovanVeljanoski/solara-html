@@ -11,19 +11,36 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# check_with_server <app.py> <check script>
+# Solara flags for the mode: "--production" or nothing (development mode, which also uses Vue's development build).
+MODE_FLAGS=""
+
+# check_with_server <app.py> <check script>   (paths from the repository root)
 check_with_server() {
-  solara run "example/$1" --production --port "$PORT" --no-open >"server-$1.log" 2>&1 &
+  local name="${1//\//-}"
+  solara run "$1" $MODE_FLAGS --port "$PORT" --no-open >"server-$name.log" 2>&1 &
   SERVER_PID=$!
   for _ in $(seq 1 60); do
     if curl -sf "http://localhost:$PORT" >/dev/null; then break; fi
     sleep 1
   done
-  python "example/$2" --url "http://localhost:$PORT" --screenshot "/tmp/solara-html-$2.png"
+  python "$2" --url "http://localhost:$PORT" --screenshot "/tmp/solara-html-${2//\//-}.png"
   cleanup
   SERVER_PID=""
 }
 
-check_with_server greeting_app.py check.py
-check_with_server beacon_app.py check_beacon.py
+run_all() {
+  check_with_server example/greeting_app.py example/check.py
+  check_with_server example/greeting_app.py example/check_sessions.py
+  check_with_server example/beacon_app.py example/check_beacon.py
+  check_with_server example/settings_app.py example/check_settings.py
+  check_with_server example/quiz_app.py example/check_quiz.py
+  check_with_server example/security_app.py example/check_security.py
+  check_with_server example/todo_app.py example/check_todo.py
+  check_with_server tests/browser/errors_app.py tests/browser/check_errors.py
+}
+
+MODE_FLAGS="--production"
+run_all
+MODE_FLAGS=""
+run_all
 python example/check_hot_reload.py

@@ -1,0 +1,18 @@
+<!--
+  Unsafe markup on purpose: solara-html must neutralise every line below. check_security.py proves it in a browser.
+-->
+<template>
+  <div class="box">
+    <a class="static-js" href="javascript:window.pwned = 1">static javascript: link</a>
+    <a class="bound-js" :href="url">bound javascript: link</a>
+    <a class="fine" href="https://example.com/">https link</a>
+    <button class="static-on" onclick="window.pwned = 1">static onclick</button>
+    <button class="dynamic-on" v-bind="{ onclick: 'window.pwned = 1' }">bound onclick</button>
+    <iframe class="srcdoc" :srcdoc="html"></iframe>
+    <div class="safe" v-safe-html="html"></div>
+  </div>
+</template>
+
+<style>
+  .box > * { display: block; margin: 0.5rem 0; }
+</style>

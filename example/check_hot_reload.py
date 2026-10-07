@@ -2,6 +2,8 @@
 
 It copies the greeting example to a temporary directory, starts `solara run` there without `--production`,
 edits greeting.html and then format.js (a relative import), and expects the open page to show each edit.
+It then breaks each script on purpose, expects an error that names the file (and no other change to the page),
+and fixes it again. Last, it misspells a name in the template and expects the warning of Vue's development build.
 Run it with `python example/check_hot_reload.py`.
 """
 
@@ -74,6 +76,29 @@ def main():
                 js.write_text(js.read_text().replace("} characters", "} letters"))
                 expect(count).to_have_text("5 letters", timeout=15_000)
 
+                # A syntax error in an imported file shows in the component, and the next edit fixes it.
+                good_js = js.read_text()
+                js.write_text(good_js + "\nexport const broken = ;\n")
+                expect(page.locator("pre", has_text="format.js")).to_contain_text("SyntaxError", timeout=15_000)
+                js.write_text(good_js)
+                expect(count).to_have_text("5 letters", timeout=15_000)
+                expect(page.locator("pre:visible")).to_have_count(0)
+
+                # The same for the script in the HTML file.
+                good_html = html.read_text()
+                html.write_text(good_html.replace("export const component = {", "export const component = { a: ,", 1))
+                expect(page.locator("pre", has_text="greeting.html (script)")).to_contain_text("SyntaxError", timeout=15_000)
+                html.write_text(good_html)
+                expect(heading).to_have_text("Howdy, World", timeout=15_000)
+                expect(page.locator("pre:visible")).to_have_count(0)
+
+                # The development build of Vue warns about a name that the template cannot find.
+                with page.expect_console_message(lambda message: 'Property "nme"' in message.text, timeout=15_000) as warning:
+                    html.write_text(good_html.replace("{{ name }}", "{{ nme }}", 1))
+                assert warning.value.text.startswith("solara-html: "), warning.value.text
+                html.write_text(good_html)
+                expect(heading).to_have_text("Howdy, World", timeout=15_000)
+
                 browser.close()
         finally:
             server.terminate()
@@ -81,8 +106,10 @@ def main():
                 server.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 server.kill()
-        if errors:
-            raise AssertionError("browser console errors:\n" + "\n".join(errors))
+        # The two broken scripts are expected to log errors. Nothing else may.
+        unexpected = [text for text in errors if "SyntaxError" not in text and "cannot load the script" not in text]
+        if unexpected:
+            raise AssertionError("browser console errors:\n" + "\n".join(unexpected))
     print("all checks passed")
 
 

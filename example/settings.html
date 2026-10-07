@@ -1,0 +1,135 @@
+<!-- A settings form: select, checkbox, number and text inputs, computed values, v-if chains and a modal dialog. -->
+<template>
+  <div class="settings">
+    <h1>Account and preferences</h1>
+
+    <section class="panel">
+      <h2>Account</h2>
+      <p><span>Name:</span> <span class="user">{{ user }}</span></p>
+      <p><span>Email:</span> <span class="email">{{ email }}</span></p>
+    </section>
+
+    <section class="panel">
+      <h2>Plan</h2>
+      <p>Current plan: <strong class="plan" :style="{ color: is_subscribed ? 'rgb(1, 128, 96)' : 'inherit' }">{{ is_subscribed ? 'Pro' : 'Free' }}</strong></p>
+      <p v-if="!is_subscribed && pro_credits > 0" class="plan-text">{{ pro_credits }} free Pro sessions left.</p>
+      <p v-else-if="!is_subscribed" class="plan-text">Pro unlocks unlimited sessions.</p>
+      <p v-else class="plan-text">You have unlimited sessions.</p>
+      <button v-if="is_subscribed" type="button" class="btn secondary" @click="manage_subscription()">Manage plan</button>
+      <button v-else type="button" class="btn primary" @click="subscribe()">Upgrade to Pro</button>
+    </section>
+
+    <section class="panel">
+      <h2>Preferences</h2>
+      <label class="field">Questions per lesson
+        <input class="num" type="number" min="3" max="50" step="1" :value="value_num_questions" @change="handleNumQuestions" />
+        <small v-if="numError" class="error">{{ numError }}</small>
+      </label>
+      <label class="field" :title="pro_access ? '' : 'Upgrade to Pro to unlock'">Level
+        <select class="level" v-model="languageLevel" :disabled="!pro_access">
+          <option v-for="o in levelOptions" :key="o.value" :value="o.value">{{ o.text }}</option>
+        </select>
+      </label>
+      <label class="switch" :title="pro_access ? '' : 'Upgrade to Pro to unlock'">
+        <input class="audio" type="checkbox" v-model="audioQuestions" :disabled="!pro_access" />
+        Mix audio into sessions
+      </label>
+      <label class="switch" :title="pro_access ? '' : 'Upgrade to Pro to unlock'">
+        <input class="ai" type="checkbox" v-model="aiChecker" :disabled="!pro_access" />
+        Explain answers with AI
+      </label>
+      <label class="field">Nickname (every change round-trips to Python, slowly)
+        <input class="nick" type="text" v-model="nickname" />
+      </label>
+    </section>
+
+    <section class="panel danger">
+      <h2>Danger zone</h2>
+      <button type="button" class="btn outline" @click="showDeleteDialog = true">Delete account</button>
+    </section>
+
+    <dialog ref="dialog" @close="showDeleteDialog = false">
+      <h3>Delete account</h3>
+      <p>Delete your account and saved data? This cannot be undone.</p>
+      <div class="actions">
+        <button type="button" class="btn secondary" @click="showDeleteDialog = false">Cancel</button>
+        <button type="button" class="btn outline confirm" @click="confirmDelete">Delete account</button>
+      </div>
+    </dialog>
+  </div>
+</template>
+
+<style>
+  @import url(./buttons.css);
+  :host { display: block; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  .settings { max-width: 40rem; margin: 0 auto; padding: 1rem; }
+  h1 { text-align: center; font-size: 1.5rem; }
+  .panel { border: 1px solid #d7dee8; border-radius: 12px; padding: 1rem; margin-top: 1rem; }
+  .panel.danger { border-color: #c0392b; }
+  h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
+  .field, .switch { display: grid; gap: .25rem; margin-top: .75rem; }
+  .switch { display: flex; align-items: center; gap: .5rem; }
+  input.num, select, input.nick { padding: .5rem; border: 1px solid #9fb0c4; border-radius: 8px; font: inherit; }
+  .error { color: #b00020; }
+  dialog { border: 0; border-radius: 14px; padding: 1.25rem; max-width: 30rem; }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  .actions { display: flex; justify-content: flex-end; gap: .5rem; }
+</style>
+
+<script type="module">
+  export const component = {
+    data() {
+      return {
+        showDeleteDialog: false,
+        numError: "",
+        levelOptions: [
+          { value: "A1", text: "A1 — Beginner" },
+          { value: "A2", text: "A2 — Elementary" },
+          { value: "B1", text: "B1 — Intermediate" },
+          { value: "B2", text: "B2 — Upper intermediate" },
+          { value: "C1", text: "C1 — Advanced" },
+          { value: "C2", text: "C2 — Proficient" },
+        ],
+      };
+    },
+    computed: {
+      pro_access() { return this.is_subscribed || this.pro_credits > 0; },
+      // The displayed value is gated by the plan; only writes go to Python.
+      languageLevel: {
+        get() { return this.pro_access ? this.language_level : "A2"; },
+        set(v) { this.language_level = v; },
+      },
+      audioQuestions: {
+        get() { return this.pro_access ? this.audio_questions : false; },
+        set(v) { this.audio_questions = v; },
+      },
+      aiChecker: {
+        get() { return this.pro_access ? this.ai_checker : false; },
+        set(v) { this.ai_checker = v; },
+      },
+    },
+    methods: {
+      handleNumQuestions(event) {
+        const n = Number(event.target.value);
+        if (Number.isInteger(n) && n >= 3 && n <= 50) {
+          this.numError = "";
+          this.value_num_questions = n;
+        } else {
+          this.numError = "Must be an integer from 3 to 50";
+          event.target.value = this.value_num_questions;
+        }
+      },
+      confirmDelete() {
+        this.showDeleteDialog = false;
+        this.delete_account();
+      },
+    },
+    watch: {
+      showDeleteDialog(open) {
+        const d = this.$refs.dialog;
+        if (open && !d.open) d.showModal();
+        if (!open && d.open) d.close();
+      },
+    },
+  };
+</script>

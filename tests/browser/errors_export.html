@@ -1,0 +1,9 @@
+<!-- Broken on purpose: the script imports a name that errors_ok.js does not export. -->
+<template>
+  <p class="export">never shown</p>
+</template>
+
+<script type="module">
+  import { nope } from "./errors_ok.js";
+  export const component = { data() { return { nope }; } };
+</script>

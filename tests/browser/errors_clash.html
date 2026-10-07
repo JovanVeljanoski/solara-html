@@ -1,0 +1,8 @@
+<!-- Broken on purpose: `name` is a Python prop, so a method cannot have the same name. -->
+<template>
+  <p class="clash">{{ name }}</p>
+</template>
+
+<script type="module">
+  export const component = { methods: { name() {} } };
+</script>

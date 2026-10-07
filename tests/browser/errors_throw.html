@@ -1,0 +1,8 @@
+<!-- Broken on purpose: the script throws while it runs. -->
+<template>
+  <p class="throw">never shown</p>
+</template>
+
+<script type="module">
+  throw new Error("boom");
+</script>

@@ -60,3 +60,95 @@ def test_children_none_or_empty(tmp_path, children):
     assert widget.children == []
     assert widget.name == "Solara"
     rc.close()
+
+
+@pytest.mark.parametrize(
+    "template",
+    [
+        '<div v-html="text"></div>',
+        '<div :innerHTML="text"></div>',
+        '<div v-bind:innerHTML="text"></div>',
+        '<div :outerHTML.prop="text"></div>',
+        '<div :.innerHTML="text"></div>',
+        '<DIV V-HTML="text"></DIV>',
+    ],
+)
+def test_raw_html_bindings_are_refused(tmp_path, template):
+    path = tmp_path / "c.html"
+    path.write_text(f"<template>{template}</template>", encoding="utf-8")
+
+    def Html(text=""):
+        pass
+
+    with pytest.raises(ValueError, match="use v-safe-html"):
+        solara_html.component_html(str(path))(Html)
+
+
+def test_safe_html_and_commented_raw_html_are_allowed(tmp_path):
+    path = tmp_path / "c.html"
+    path.write_text('<template><!-- v-html is refused --><div v-safe-html="text"></div></template>', encoding="utf-8")
+
+    def Html(text=""):
+        pass
+
+    solara_html.component_html(str(path))(Html)
+
+
+def test_native_slots():
+    from solara_html.component import _native_slots
+
+    assert _native_slots("<slot></slot>") == "<component :is=\"'slot'\"></component>"
+    assert _native_slots('<slot name="x" />') == "<component :is=\"'slot'\" name=\"x\" />"
+    assert _native_slots("<slotted></slotted>") == "<slotted></slotted>"
+
+
+def test_the_runtime_module_holds_data_and_no_user_code(tmp_path):
+    from solara_html.component import _module_code
+    from solara_html.imports import bundle_imports
+    from solara_html.parse import parse_component_file
+
+    path = tmp_path / "c.html"
+    path.write_text('<template><p>{{ name }}</p></template><script type="module">export const component = {};</script>', encoding="utf-8")
+    component = parse_component_file(path)
+
+    code = _module_code(component, bundle_imports(component.script, path), ["name"], ["reset"])
+
+    # The script is a string in the data, so a syntax error in it cannot stop the module from loading.
+    assert code.startswith('import { defineHtmlComponent } from "solara-html";\nexport const Component = defineHtmlComponent({')
+    assert '"propNames": ["name"]' in code
+    assert '"eventNames": ["reset"]' in code
+    assert '"code": "export const component = {};"' in code
+    assert "\nexport const component" not in code
+
+
+def test_a_script_syntax_error_does_not_fail_in_python(tmp_path):
+    path = tmp_path / "c.html"
+    path.write_text('<template><p></p></template><script type="module">export const component = { a: };</script>', encoding="utf-8")
+
+    @solara_html.component_html(str(path))
+    def Html():
+        pass
+
+
+@pytest.mark.parametrize("mode, file", [("production", "vue.esm-browser.prod.js"), ("development", "vue.esm-browser.js")])
+def test_vue_build_follows_the_solara_mode(mode, file):
+    from solara.server import settings
+
+    from solara_html.component import _vue_file
+
+    before = settings.main.mode
+    settings.main.mode = mode
+    try:
+        assert _vue_file().name == file
+        assert _vue_file().is_file()
+    finally:
+        settings.main.mode = before
+
+
+def test_split_arguments():
+    from solara_html.component import _split_arguments
+
+    arguments = ["name", "on_name", "on_other", "event_reset", "children"]
+
+    # `on_name` belongs to the prop `name`; `on_other` has no prop of that name, so it is a prop itself.
+    assert _split_arguments(arguments) == (["name", "on_other"], ["reset"])

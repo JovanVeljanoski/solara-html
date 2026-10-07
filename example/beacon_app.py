@@ -5,8 +5,8 @@ Run from the repository root:
 
 The native Beacon is defined by beacon.html. The Solara slider and button are
 Vue-backed widgets projected into its <slot>. Both control the same Python state.
-The call-sign input uses a browser-side debounce, so Python receives committed
-values rather than one update per keystroke.
+The call-sign input keeps a local draft, so Python receives committed values
+(after a pause, with Enter, or on blur) rather than one update per keystroke.
 """
 
 import solara
@@ -77,7 +77,7 @@ def Page():
             Station("Aurora relay", "AURORA-7", 64, 184)
             Station("Ember relay", "EMBER-3", 38, 24)
         solara.Text(
-            "See example/beacon_app.py for Python state and the decorator, and example/beacon.html for HTML, scoped CSS, and browser JavaScript. "
+            "See example/beacon_app.py for Python state and the decorator, and example/beacon.html for the Vue template, scoped CSS, and browser JavaScript. "
             "The page shell and slotted sliders/buttons still use Solara's existing Vue path.",
             style={"color": "#536979", "font-size": "13px"},
         )
