@@ -2,7 +2,7 @@
 
 > **Highly experimental.** This project can change in ways that break your code, at any time and without notice. Do not depend on it for anything you cannot rewrite.
 
-Single-file HTML components for Solara, as a separate package.
+Single-file HTML components for Solara, as a separate package. Docs: <https://jovanveljanoski.github.io/solara-html/>.
 One `.html` file holds a component's template, scoped CSS and browser JavaScript, and Solara connects it to Python state.
 The template is [Vue 3](https://vuejs.org/) template syntax, so a page is plain HTML with `{{ }}`, `v-model`, `v-if`, `v-for` and `@click`.
 It works with a stock Solara: no server routes, no template edits, no monkey patches, no fork.
@@ -273,5 +273,7 @@ then in a second shell `uv run python example/<check>.py --url http://localhost:
 | [greeting_app.py](example/greeting_app.py) again | Several browsers on one server, and a reload | `check_sessions.py` |
 
 Hot reload in development mode (starts its own server): `uv run python example/check_hot_reload.py`.
+
+The docs page is [docs/index.html](docs/index.html), plain HTML that GitHub Pages serves. Its code blocks (`data-file`) are run by `tests/test_docs.py` and `tests/browser/check_docs.py`, and its facts (versions, names, lists) are compared with the code. Edit the page and the code together; the tests fail when they differ.
 
 [tests/browser/errors_app.py](tests/browser/errors_app.py) is not an example. It is broken on purpose (template, syntax error, bad import, missing export, throw): each error must show in its own component and name the file, and the page must keep working. `tests/browser/check_errors.py` checks it.
