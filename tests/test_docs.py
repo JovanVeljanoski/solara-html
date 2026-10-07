@@ -121,7 +121,7 @@ def test_the_examples_load(page: _Page, tmp_path: Path) -> None:
 
 
 def test_every_example_shows_its_result(page: _Page) -> None:
-    # check_docs.py saves these pictures when the page is published; they are not in the repository.
+    # check_docs.py saves these pictures in CI; they are not in the repository.
     for folder in {name.split("/")[0] for name in page.files}:
         assert page.images.get(f"img/{folder}.png"), f"no <img src=\"img/{folder}.png\" alt=...> for the example {folder}"
 

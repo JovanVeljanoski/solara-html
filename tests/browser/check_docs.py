@@ -4,7 +4,7 @@ It writes every example of the page to a temporary folder, runs each as a Solara
 template mistakes) and does what the page says the example does. Run it with `python tests/browser/check_docs.py`.
 
 With `--screenshots docs/img` it also saves the result of each example as `<example>.png`, for the docs page.
-The workflow that publishes the page does that, so the images are never committed.
+The browser job of CI does that and hands the images to the job that publishes the page, so they are never committed.
 """
 
 import socket
