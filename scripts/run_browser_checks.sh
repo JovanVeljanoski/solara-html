@@ -44,3 +44,4 @@ run_all
 MODE_FLAGS=""
 run_all
 python example/check_hot_reload.py
+python tests/browser/check_docs.py

@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>solara-html</title>
+<meta name="description" content="Single-file HTML components for Solara." />
+<style>
+  :root { --fg: #1c2430; --muted: #566274; --bg: #ffffff; --code-bg: #f3f5f8; --line: #d9dfe7; --link: #1a56b0; --warn-bg: #fff4d6; --warn-line: #d9a400; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg: #e4e8ee; --muted: #9aa6b6; --bg: #14181f; --code-bg: #1d232d; --line: #2c3542; --link: #7ab0ff; --warn-bg: #3a3014; --warn-line: #b88a00; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  h1 { font-size: 1.9rem; margin: 1.25rem 0 0.25rem; }
+  h2 { font-size: 1.3rem; margin: 2.5rem 0 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
+  h3 { font-size: 1.05rem; margin: 1.5rem 0 0.4rem; }
+  p, ul, ol { margin: 0.6rem 0; }
+  a { color: var(--link); }
+  code, pre { font: 0.88rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  :not(pre) > code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 0.75rem 1rem; overflow-x: auto; margin: 0.75rem 0; }
+  .file { margin: 0.9rem 0 0; font-size: 0.82rem; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .file + pre { margin-top: 0.2rem; }
+  table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.95rem; }
+  th, td { text-align: left; vertical-align: top; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  #alpha-warning { background: var(--warn-bg); border: 1px solid var(--warn-line); border-left-width: 6px; border-radius: 6px; padding: 0.75rem 1rem; margin: 1rem 0; }
+  #alpha-warning p { margin: 0; }
+  nav { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.95rem; margin: 0.75rem 0 0; }
+  .lead { color: var(--muted); margin-top: 0; }
+  figure { margin: 0.75rem 0; }
+  figure img { display: block; max-width: 100%; height: auto; background: #fff; border: 1px solid var(--line); border-radius: 6px; }
+  figcaption { color: var(--muted); font-size: 0.88rem; margin-top: 0.3rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>solara-html</h1>
+<p class="lead">Single-file HTML components for <a href="https://solara.dev">Solara</a>.</p>
+
+<div id="alpha-warning" role="note">
+  <p><strong>Early alpha.</strong> This project is experimental and is likely to change, or break, with little or no notice. Do not depend on it for anything you cannot rewrite.</p>
+</div>
+
+<nav>
+  <a href="#install">Install</a>
+  <a href="#motivation">Motivation</a>
+  <a href="#quick-start">Quick start</a>
+  <a href="#api">API</a>
+  <a href="#examples">Examples</a>
+  <a href="#security">Security</a>
+  <a href="#limits">Limits</a>
+  <a href="https://github.com/JovanVeljanoski/solara-html">GitHub</a>
+</nav>
+
+<h2 id="install">Install</h2>
+<pre><code>pip install solara
+pip install git+https://github.com/JovanVeljanoski/solara-html.git</code></pre>
+<p><code>pip install solara</code> gives you the <code>solara run</code> command. Not on PyPI. Requires Python <span data-sync="python">3.12</span> or later, Solara <span data-sync="solara">1.64.0</span> or later, and a browser from 2022 or later.</p>
+
+<h2 id="motivation">Motivation</h2>
+<ul>
+  <li>A component is one <code>.html</code> file: a template, CSS and JavaScript.</li>
+  <li>The template is <a href="https://vuejs.org/guide/essentials/template-syntax.html">Vue 3</a> syntax (<span data-sync="vue">Vue 3.5.43</span>, vendored). There is no build step.</li>
+  <li>It runs on stock Solara through <a href="https://github.com/widgetti/ipyreact">ipyreact</a>. Nothing in Solara is patched.</li>
+  <li>Python props are assigned in the template. Python events are called as methods, as with Solara widgets.</li>
+  <li>CSS is scoped to the component by a shadow root.</li>
+  <li>An error in one component's template or script shows in that component. The other components keep working.</li>
+  <li>In development mode, a change to the HTML file reloads the app.</li>
+</ul>
+<p>The package started as <a href="https://github.com/widgetti/solara/pull/1233">widgetti/solara#1233</a> by Maarten A. Breddels.</p>
+
+<h2 id="quick-start">Quick start</h2>
+<p>Two files in one folder.</p>
+<p class="file">hello.html</p>
+<pre><code data-file="hello/hello.html">&lt;template&gt;
+  &lt;div class="hello"&gt;
+    &lt;label&gt;Your name &lt;input v-model="name" /&gt;&lt;/label&gt;
+    &lt;h1&gt;Hello, &lt;span&gt;{{ name }}&lt;/span&gt;!&lt;/h1&gt;
+    &lt;button :disabled="name === 'World'" @click="reset()"&gt;Reset&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;style&gt;
+  .hello { max-width: 22rem; padding: 1.5rem; border-radius: 16px; color: white; font-family: system-ui, sans-serif;
+    background: linear-gradient(135deg, #7c3aed, #ec4899 60%, #f59e0b); box-shadow: 0 10px 30px rgb(124 58 237 / 35%); }
+  label { display: grid; gap: 0.3rem; font-size: 0.85rem; }
+  input { padding: 0.6rem 0.8rem; border: 0; border-radius: 10px; font: inherit; outline: none; }
+  input:focus { box-shadow: 0 0 0 3px rgb(255 255 255 / 60%); }
+  h1 { margin: 1rem 0; font-size: 2rem; }
+  h1 span { padding: 0 0.4rem; border-radius: 8px; background: rgb(255 255 255 / 22%); }
+  button { padding: 0.5rem 1.1rem; border: 0; border-radius: 999px; background: white; color: #7c3aed; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: 0.45; cursor: default; }
+&lt;/style&gt;</code></pre>
+<p class="file">app.py</p>
+<pre><code data-file="hello/app.py">import solara
+
+import solara_html
+
+
+@solara_html.component_html("hello.html")
+def Hello(name="World", on_name=None, event_reset=None):
+    pass
+
+
+name = solara.reactive("World")
+
+
+@solara.component
+def Page():
+    Hello(name=name.value, on_name=name.set, event_reset=lambda _data: name.set("World"))
+    solara.Text(f"Python sees: {name.value}")</code></pre>
+<pre><code>solara run app.py</code></pre>
+<p>Typing in the input changes the greeting and calls <code>on_name</code>. The button calls <code>event_reset</code> in Python.</p>
+<figure>
+  <img src="img/hello.png" alt="A purple to orange gradient card with a text field containing Ada, the heading Hello, Ada!, and a white Reset button, above the line Python sees: Ada" />
+  <figcaption>After typing "Ada". The last line comes from Python.</figcaption>
+</figure>
+
+<h2 id="api">API</h2>
+
+<h3 id="api-decorator">solara_html.component_html(path)</h3>
+<p>A decorator. <code>path</code> is the HTML file, relative to the file of the decorated function. The function signature is the contract. The function body is not used.</p>
+<p>A change to the HTML file, to a file it imports, or to a CSS file it imports reloads the app in development mode.</p>
+
+<h3 id="api-arguments">Arguments</h3>
+<table>
+  <tr><th>In Python</th><th>In the template</th></tr>
+  <tr><td><code>name="World"</code></td><td>A variable <code>name</code>. Writing it in the browser updates Python. Syncs both ways.</td></tr>
+  <tr><td><code>on_name=callback</code></td><td>Called with the new value when the browser changes <code>name</code>. Applies only when <code>name</code> is an argument too.</td></tr>
+  <tr><td><code>event_reset=callback</code></td><td>A method <code>reset(data)</code>. It calls <code>callback(data)</code> in Python. <code>data</code> must be JSON. The callback gets <code>None</code> when there is no data.</td></tr>
+  <tr><td><code>children=[]</code></td><td>The Solara widgets shown at the template's <code>&lt;slot&gt;&lt;/slot&gt;</code>. Only the default slot exists.</td></tr>
+</table>
+<p>Props are assigned (<code>name = "x"</code>, <code>v-model="name"</code>). Events are called (<code>@click="reset()"</code>). Python never receives <code>$emit</code>.</p>
+<p>The decorator raises <code>ValueError</code> for:</p>
+<ul>
+  <li>an argument named like an <code>ipyreact.Widget</code> attribute, for example <code data-sync="reserved">keys, comm, open, close, layout, model_id, tooltip, tabbable, events, props</code>, or an argument that starts with <code>_</code>;</li>
+  <li>two arguments that give the same React prop, such as a prop and an event with the same name, or <code>x</code> and <code>setX</code>;</li>
+  <li>a template that uses <code data-sync="refused">v-html, :innerHTML, :outerHTML</code>;</li>
+  <li>a missing <code>&lt;template&gt;</code>, a missing imported file, an import cycle, or a CSS <code>@import</code> that is not a relative file.</li>
+</ul>
+<p>Props and event data are JSON: <code>str</code>, <code>int</code>, <code>float</code>, <code>bool</code>, <code>None</code>, <code>list</code>, <code>dict</code>. A whole number that the browser writes to a <code>float</code> prop reaches Python as an <code>int</code>.</p>
+
+<h3 id="api-file">The file</h3>
+<table>
+  <tr><th>Part</th><th></th></tr>
+  <tr><td><code>&lt;template&gt;</code></td><td>Required. Vue 3 template syntax: <code>{{ }}</code>, <code>v-model</code>, <code>v-if</code>, <code>v-for</code>, <code>v-show</code>, <code>:attr</code>, <code>@event</code>, refs.</td></tr>
+  <tr><td><code>&lt;style&gt;</code></td><td>Optional. Applied in a shadow root, so it does not leak in or out. <code>@import "./file.css";</code> is inlined and watched.</td></tr>
+  <tr><td><code>&lt;script type="module"&gt;</code></td><td>Optional. Export a Vue options object named <code>component</code>. Props and events are <code>this.&lt;name&gt;</code>. Relative <code>import</code> statements of other <code>.js</code> files work. <code>import ... from "react"</code> works as in any ipyreact module.</td></tr>
+</table>
+<p>Use the options API: <code>data</code>, <code>computed</code>, <code>watch</code>, <code>methods</code>, lifecycle hooks, <code>components</code>. A <code>computed</code> or <code>methods</code> entry must not have the name of a prop or event.</p>
+
+<h3 id="api-safe-html">v-safe-html</h3>
+<p><code>v-safe-html="text"</code> shows markup from Python or users. It parses without running anything, keeps a short list of tags and attributes, and drops scripts, frames, forms and event handlers.</p>
+
+<h3 id="api-errors">Errors</h3>
+<ul>
+  <li>A mistake in the template or a method shows as a red message in the component.</li>
+  <li>A JavaScript error in the script or a file it imports shows in that component as <code>file: error</code>.</li>
+  <li>In development mode (<code>solara run</code> without <code>--production</code>), the browser console also warns about template mistakes, such as a name that does not exist.</li>
+</ul>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="example-list">A list the browser edits</h3>
+<p>A list prop changed by assignment (<code>add</code>) and in place (<code>item.done</code>). Python gets both. Classes bind to data (<code>:class</code>).</p>
+<p class="file">tasks.html</p>
+<pre><code data-file="tasks/tasks.html">&lt;template&gt;
+  &lt;div class="tasks"&gt;
+    &lt;form @submit.prevent="add"&gt;
+      &lt;input v-model="draft" placeholder="New task" /&gt;
+      &lt;button&gt;Add&lt;/button&gt;
+    &lt;/form&gt;
+    &lt;ul&gt;
+      &lt;li v-for="item in items" :class="{ done: item.done }"&gt;
+        &lt;label&gt;
+          &lt;input type="checkbox" v-model="item.done" /&gt;
+          {{ item.text }}
+        &lt;/label&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;style&gt;
+  .tasks { max-width: 22rem; padding: 1.25rem; border-radius: 16px; background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
+  form { display: flex; gap: 0.5rem; }
+  form input { flex: 1; padding: 0.55rem 0.8rem; border: 1px solid #334155; border-radius: 10px; background: #1e293b; color: inherit; font: inherit; }
+  form button { padding: 0.55rem 1rem; border: 0; border-radius: 10px; background: #14b8a6; color: #042f2e; font: inherit; font-weight: 700; cursor: pointer; }
+  ul { margin: 1rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.5rem; }
+  li { padding: 0.6rem 0.8rem; border-radius: 10px; background: #1e293b; border-left: 4px solid #f59e0b; }
+  li.done { border-left-color: #14b8a6; color: #64748b; text-decoration: line-through; }
+  label { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; }
+  li input { width: 1.1rem; height: 1.1rem; accent-color: #14b8a6; }
+&lt;/style&gt;
+
+&lt;script type="module"&gt;
+  export const component = {
+    data() {
+      return { draft: "" };
+    },
+    methods: {
+      add() {
+        if (!this.draft) return;
+        this.items = [...this.items, { text: this.draft, done: false }];
+        this.draft = "";
+      },
+    },
+  };
+&lt;/script&gt;</code></pre>
+<p class="file">app.py</p>
+<pre><code data-file="tasks/app.py">import solara
+
+import solara_html
+
+
+@solara_html.component_html("tasks.html")
+def Tasks(items: list = [], on_items=None):
+    pass
+
+
+items = solara.reactive([])
+
+
+@solara.component
+def Page():
+    Tasks(items=items.value, on_items=items.set)
+    solara.Text(f"Python sees: {items.value}")</code></pre>
+<figure>
+  <img src="img/tasks.png" alt="A dark task list with an input and a teal Add button, a ticked task Write docs, an open task Ship it, and the line Python sees with the list" />
+  <figcaption>After adding "Write docs" and "Ship it", and ticking the first. The last line comes from Python.</figcaption>
+</figure>
+
+<h3 id="example-slot">Props in CSS, a slot and an event with data</h3>
+<p>The <code>color</code> prop becomes a CSS variable. The children of each Python call appear at <code>&lt;slot&gt;</code>. The event passes a value to Python.</p>
+<p class="file">card.html</p>
+<pre><code data-file="card/card.html">&lt;template&gt;
+  &lt;article class="card" :style="{ '--accent': color }"&gt;
+    &lt;header&gt;&lt;h2&gt;{{ title }}&lt;/h2&gt;&lt;/header&gt;
+    &lt;div class="body"&gt;&lt;slot&gt;&lt;/slot&gt;&lt;/div&gt;
+    &lt;button @click="choose(title)"&gt;Choose&lt;/button&gt;
+  &lt;/article&gt;
+&lt;/template&gt;
+
+&lt;style&gt;
+  .card { width: 13rem; overflow: hidden; border-radius: 14px; background: white; color: #1e293b; font-family: system-ui, sans-serif; box-shadow: 0 6px 20px rgb(0 0 0 / 18%); }
+  header { padding: 1rem 1.2rem; background: var(--accent); color: white; }
+  h2 { margin: 0; font-size: 1.2rem; }
+  .body { padding: 1rem 1.2rem; }
+  button { display: block; width: calc(100% - 2.4rem); margin: 0 1.2rem 1.2rem; padding: 0.6rem; border: 2px solid var(--accent); border-radius: 8px;
+    background: white; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+  button:hover { background: var(--accent); color: white; }
+&lt;/style&gt;</code></pre>
+<p class="file">app.py</p>
+<pre><code data-file="card/app.py">import solara
+
+import solara_html
+
+
+@solara_html.component_html("card.html")
+def Card(title="", color="#0ea5e9", event_choose=None, children=None):
+    pass
+
+
+chosen = solara.reactive("")
+
+
+@solara.component
+def Page():
+    with solara.Row(gap="1rem"):
+        with Card(title="Starter", color="#0ea5e9", event_choose=chosen.set):
+            solara.Text("For one app.")
+        with Card(title="Pro", color="#a855f7", event_choose=chosen.set):
+            solara.Text("For a team.")
+    solara.Text(f"Chosen: {chosen.value}")</code></pre>
+<figure>
+  <img src="img/card.png" alt="Two cards side by side: Starter with a blue header and Pro with a purple header, each with a text and a Choose button, and the line Chosen: Pro" />
+  <figcaption>After clicking Choose on Pro. The last line comes from Python.</figcaption>
+</figure>
+
+<h3 id="run-examples">Run the other examples</h3>
+<p>The repository has more apps, each with a browser check. They are in the repository, not in the installed package.</p>
+<pre><code>git clone https://github.com/JovanVeljanoski/solara-html.git
+cd solara-html
+pip install solara -e .
+solara run example/quiz_app.py</code></pre>
+<p>In development mode (the default of <code>solara run</code>), editing an <code>.html</code> file in <code>example/</code> reloads the page.</p>
+<table>
+  <tr><th>App</th><th>Shows</th></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/greeting_app.py">greeting_app.py</a></td><td><code>v-model</code>, a computed value, an event, a relative JS import, a slot</td></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/beacon_app.py">beacon_app.py</a></td><td>Two instances, a debounced input, watchers, lifecycle hooks, Solara widgets in the slot</td></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/settings_app.py">settings_app.py</a></td><td><code>select</code>, checkbox, number validation, <code>v-if</code> chains, a modal <code>&lt;dialog&gt;</code>, a slow server, a shared CSS <code>@import</code></td></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/quiz_app.py">quiz_app.py</a></td><td>A child component in its own <code>.js</code> file, events with data, keyboard shortcuts, timers</td></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/todo_app.py">todo_app.py</a></td><td>A list of dicts that the browser edits</td></tr>
+  <tr><td><a href="https://github.com/JovanVeljanoski/solara-html/blob/master/example/security_app.py">security_app.py</a></td><td>What the guard and <code>v-safe-html</code> remove</td></tr>
+</table>
+<p>A guide for writing components, with rules and recipes: <a href="https://github.com/JovanVeljanoski/solara-html/blob/master/docs/authoring.md">docs/authoring.md</a>.</p>
+
+<h2 id="security">Security</h2>
+<ul>
+  <li>Treat the template as code you wrote. Treat values from Python or users as untrusted.</li>
+  <li><code>v-html</code> and <code>:innerHTML</code> are refused. Use <code>v-safe-html</code>.</li>
+  <li>A guard removes every attribute whose name starts with <code>on</code>, <code>srcdoc</code>, and a URL in <code data-sync="url-attributes">href, src, action, formaction, poster, data, xlink:href</code> unless it is relative or uses <code data-sync="protocols">http:, https:, mailto:, tel:</code>.</li>
+  <li>Never bind untrusted data to <code>&lt;component :is&gt;</code>. A tag name such as <code>script</code> runs. This is not detected.</li>
+  <li>The template is compiled in the browser, so the page's Content-Security-Policy must allow <code>unsafe-eval</code>.</li>
+</ul>
+
+<h2 id="limits">Limits</h2>
+<ul>
+  <li>Early alpha. The API can change at any time.</li>
+  <li>Built for the Solara server. Jupyter is not a goal.</li>
+  <li>Only the default slot.</li>
+  <li>Python cannot call a method in the browser. Send a value the browser reacts to, such as a counter prop with a <code>watch</code>.</li>
+  <li>No <code>to_json</code> / <code>from_json</code>, no binary buffers.</li>
+  <li>Vuetify and Solara classes do not apply inside a component.</li>
+  <li>Relative imports in scripts are rewritten with regular expressions. Dynamic <code>import()</code> does not work.</li>
+</ul>
+
+<h2 id="more">More</h2>
+<ul>
+  <li><a href="https://github.com/JovanVeljanoski/solara-html">Source and README</a></li>
+  <li><a href="https://github.com/JovanVeljanoski/solara-html/issues">Issues</a></li>
+  <li>MIT licence.</li>
+</ul>
+
+</main>
+</body>
+</html>
